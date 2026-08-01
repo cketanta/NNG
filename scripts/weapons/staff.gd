@@ -3,6 +3,7 @@ extends Node2D
 ## 每级 +1 枚子弹（散射）；攻击范围天赋延长弹道距离。
 
 const PROJECTILE_SCENE := preload("res://scenes/weapons/projectile.tscn")
+const TEXTURE := preload("res://assets/weapons/staff.svg")  # 武器本体贴图
 
 var weapon_id := "staff"
 
@@ -39,7 +40,12 @@ func current_bullet_count() -> int:
 
 func _process(delta: float) -> void:
 	if level < 1:
+		visible = false
 		return
+	visible = true
+	if _aim_dir != Vector2.ZERO:
+		rotation = _aim_dir.angle()
+	queue_redraw()
 	_timer += delta
 	var cd := base_cooldown / maxf(attack_speed_mult, 0.1)
 	if _firing and _aim_dir != Vector2.ZERO and _timer >= cd:
@@ -56,5 +62,10 @@ func fire() -> void:
 		var projectile := PROJECTILE_SCENE.instantiate()
 		projectile.setup(dir, base_projectile_speed, int(round(damage * damage_mult)), true)
 		projectile.set_range_mult(attack_range_mult)
-		projectile.global_position = global_position + dir * 20.0
+		projectile.set_visual_type("staff")
+		projectile.global_position = global_position + dir * 30.0  # 从武器枪口处发射
 		get_tree().current_scene.add_child(projectile)
+
+func _draw() -> void:
+	# 武器本体贴图：朝瞄准方向居中绘制。
+	draw_texture_rect(TEXTURE, Rect2(-22.0, -22.0, 44.0, 44.0), false)

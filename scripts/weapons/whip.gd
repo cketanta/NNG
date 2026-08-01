@@ -4,6 +4,7 @@ extends Node2D
 
 const LAYER_WEAPON := 6  # 武器命中区所在的碰撞层（1 基）
 const LAYER_ENEMY := 3   # 敌人所在的碰撞层（1 基）
+const TEXTURE := preload("res://assets/weapons/whip.svg")  # 武器本体贴图
 
 var weapon_id := "whip"
 
@@ -42,7 +43,12 @@ func set_stats(attack_speed: float, attack_range: float, dmg_mult: float) -> voi
 
 func _process(delta: float) -> void:
 	if level < 1:
+		visible = false
 		return
+	visible = true
+	if _aim_dir != Vector2.ZERO:
+		rotation = _aim_dir.angle()
+	queue_redraw()
 	if _combo_remaining > 0:
 		_combo_timer += delta
 		if _combo_timer >= combo_step_time:
@@ -69,7 +75,7 @@ func _spawn_swing(index: int) -> void:
 	zone.collision_mask = 1 << (LAYER_ENEMY - 1)
 	zone.monitorable = false
 
-	var polygon := _sector_points(swing_range, deg_to_rad(arc_degrees))
+	var polygon := _sector_points(8.0, swing_range, deg_to_rad(arc_degrees))  # 以武器为出发点的扇环
 
 	var collision := CollisionPolygon2D.new()
 	collision.polygon = polygon
@@ -83,7 +89,7 @@ func _spawn_swing(index: int) -> void:
 	zone.body_entered.connect(_on_zone_body_entered.bind(int(round(damage * damage_mult))))
 
 	get_tree().current_scene.add_child(zone)
-	zone.global_position = global_position
+	zone.global_position = global_position  # 以武器位置为扇环起点
 	zone.rotation = dir.angle()
 
 	var timer := get_tree().create_timer(swing_lifetime)
@@ -93,12 +99,20 @@ func _on_zone_body_entered(body: Node2D, dmg: int) -> void:
 	if body.has_method("take_damage"):
 		body.take_damage(dmg)
 
-## 凸扇形多边形（弧角必须 < 180°），朝 +X 方向，用于命中区与视觉。
-func _sector_points(radius: float, arc: float) -> PackedVector2Array:
+## 凸扇环多边形（弧角必须 < 180°），朝 +X 方向，用于命中区与视觉。
+func _sector_points(inner_radius: float, outer_radius: float, arc: float) -> PackedVector2Array:
 	var points := PackedVector2Array()
-	points.append(Vector2.ZERO)
 	var steps := 12
+	# 外弧（-arc/2 到 +arc/2）
 	for i in range(steps + 1):
 		var a := -arc / 2.0 + arc * float(i) / float(steps)
-		points.append(Vector2.from_angle(a) * radius)
+		points.append(Vector2.from_angle(a) * outer_radius)
+	# 内弧（+arc/2 回到 -arc/2），闭合形成环带
+	for i in range(steps + 1):
+		var a := arc / 2.0 - arc * float(i) / float(steps)
+		points.append(Vector2.from_angle(a) * inner_radius)
 	return points
+
+func _draw() -> void:
+	# 武器本体贴图：朝瞄准方向居中绘制。
+	draw_texture_rect(TEXTURE, Rect2(-22.0, -22.0, 44.0, 44.0), false)

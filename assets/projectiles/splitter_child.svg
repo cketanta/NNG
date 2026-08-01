@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
+  <!-- 分裂小弹：缩小版黄橙菱形 -->
+  <polygon points="8,1 14,8 8,15 2,8" fill="#f0c040"/>
+  <polygon points="8,3.5 12,8 8,12.5 4,8" fill="#ffe9a0"/>
+</svg>

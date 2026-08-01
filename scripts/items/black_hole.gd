@@ -6,6 +6,7 @@ extends Node2D
 const ENEMY_GROUP := "enemies"
 const BULLET_GROUPS := ["enemy_projectiles", "friendly_projectiles"]
 const RING_DOTS := 14
+const CORE_TEXTURE := preload("res://assets/effects/black_hole_core.svg")  # 核心贴图
 
 @export var radius: float = 130.0
 @export var bullet_pull_speed: float = 560.0
@@ -40,6 +41,6 @@ func _draw() -> void:
 	for i in range(RING_DOTS):
 		var a := _rotate_angle + TAU * float(i) / RING_DOTS
 		draw_circle(Vector2.from_angle(a) * radius, 2.5, Color(0.75, 0.45, 1.0, 0.7))
-	# 核心：深色本体 + 发光边缘。
-	draw_circle(Vector2.ZERO, 12.0, Color(0.1, 0.0, 0.15, 1.0))
-	draw_arc(Vector2.ZERO, 12.0, 0.0, TAU, 24, Color(0.7, 0.4, 1.0, 0.8), 2.0)
+	# 核心：贴图尺寸随黑洞半径（即黑洞枪等级）略微变大，130 级为基准 12px。
+	var core_r := 12.0 + (radius - 130.0) * 0.03
+	draw_texture_rect(CORE_TEXTURE, Rect2(-core_r, -core_r, core_r * 2.0, core_r * 2.0), false)

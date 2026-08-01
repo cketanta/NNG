@@ -2,6 +2,7 @@ extends Node2D
 ## 分裂者：发射一颗子弹，命中敌人后向全方向分裂成若干略小的子弹。
 
 const PROJECTILE_SCENE := preload("res://scenes/weapons/projectile.tscn")
+const TEXTURE := preload("res://assets/weapons/splitter.svg")  # 武器本体贴图
 
 var weapon_id := "splitter"
 
@@ -35,7 +36,12 @@ func set_stats(attack_speed: float, attack_range: float, dmg_mult: float) -> voi
 
 func _process(delta: float) -> void:
 	if level < 1:
+		visible = false
 		return
+	visible = true
+	if _aim_dir != Vector2.ZERO:
+		rotation = _aim_dir.angle()
+	queue_redraw()
 	_timer += delta
 	var cd := base_cooldown / maxf(attack_speed_mult, 0.1)
 	if _firing and _aim_dir != Vector2.ZERO and _timer >= cd:
@@ -54,5 +60,10 @@ func fire() -> void:
 	projectile.setup(_aim_dir, base_projectile_speed, int(round(damage * damage_mult)), true)
 	projectile.set_range_mult(attack_range_mult)
 	projectile.set_split_on_hit(current_split_count())
-	projectile.global_position = global_position + _aim_dir * 20.0
+	projectile.set_visual_type("splitter")
+	projectile.global_position = global_position + _aim_dir * 30.0  # 从武器枪口处发射
 	get_tree().current_scene.add_child(projectile)
+
+func _draw() -> void:
+	# 武器本体贴图：朝瞄准方向居中绘制。
+	draw_texture_rect(TEXTURE, Rect2(-22.0, -22.0, 44.0, 44.0), false)

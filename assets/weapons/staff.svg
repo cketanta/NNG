@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 法杖：灰蓝杖身 + 右端蓝色发光宝石 -->
+  <rect x="6" y="21" width="30" height="6" rx="3" fill="#7a8ca0"/>
+  <circle cx="6" cy="24" r="5" fill="#5a6b80"/>
+  <polygon points="36,24 42,14 44,24 42,34" fill="#3f8cff"/>
+  <polygon points="38.5,24 42,18 43,24 42,30" fill="#9fd0ff"/>
+</svg>

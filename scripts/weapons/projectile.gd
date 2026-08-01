@@ -11,6 +11,13 @@ const TRAP_RADIUS := 26.0             # 黑洞：低于此距离子弹开始抽�
 const CHILD_SCENE_PATH := "res://scenes/weapons/projectile.tscn"
 const BLACK_HOLE_SCENE_PATH := "res://scenes/items/black_hole.tscn"
 
+# 各武器子弹的贴图（占位 SVG，后续换正式美术只需替换文件）。
+const TEX_STAFF := preload("res://assets/projectiles/staff_bullet.svg")
+const TEX_SPLITTER := preload("res://assets/projectiles/splitter_bullet.svg")
+const TEX_SPLITTER_CHILD := preload("res://assets/projectiles/splitter_child.svg")
+const TEX_BLACK_HOLE := preload("res://assets/projectiles/black_hole_bullet.svg")
+const TEX_ENEMY := preload("res://assets/projectiles/enemy_bullet.svg")
+
 var _direction := Vector2.RIGHT
 var _speed := 500.0
 var _damage := 1
@@ -21,6 +28,7 @@ var _is_small := false
 var _spawn_black_hole := false
 var _black_hole_radius := 130.0
 var _already_hit := false    # 每颗子弹只命中一只怪、命中即消失（不穿透存活、不累积）
+var _visual_type := "default"  # 子弹贴图类型（staff/splitter/splitter_child/black_hole_gun）
 
 var _pull_target: Node2D = null
 var _pull_speed := 0.0
@@ -58,6 +66,10 @@ func set_small_child() -> void:
 	_is_small = true
 	scale = Vector2(0.65, 0.65)
 
+## 设置子弹贴图类型（不同武器的子弹视觉不同）。
+func set_visual_type(type: String) -> void:
+	_visual_type = type
+
 ## 黑洞枪：命中敌人在命中点生成黑洞。
 func set_spawn_black_hole(radius: float) -> void:
 	_spawn_black_hole = true
@@ -84,9 +96,34 @@ func _physics_process(delta: float) -> void:
 		queue_free()
 
 func _draw() -> void:
+	# 敌方弹固定用敌方贴图；友方弹按武器类型选贴图，未设置类型则回退到原蓝色圆。
+	if not _friendly:
+		_draw_texture_centered(TEX_ENEMY, 16.0)
+		return
+	var tex := TEX_STAFF
+	var size := 18.0
+	match _visual_type:
+		"splitter":
+			tex = TEX_SPLITTER
+		"splitter_child":
+			tex = TEX_SPLITTER_CHILD
+		"black_hole_gun":
+			tex = TEX_BLACK_HOLE
+			size = 16.0
+		"staff":
+			tex = TEX_STAFF
+		_:
+			_draw_fallback_ball()
+			return
+	_draw_texture_centered(tex, size)
+
+func _draw_texture_centered(tex: Texture2D, size: float) -> void:
+	# 分裂小弹节点自带 0.65 缩放，这里画正常大小即可。
+	draw_texture_rect(tex, Rect2(-size * 0.5, -size * 0.5, size, size), false)
+
+func _draw_fallback_ball() -> void:
 	var radius := 3.0 if _is_small else 5.0
-	var color := Color(0.45, 0.8, 1.0) if _friendly else Color(0.35, 0.9, 0.45)
-	draw_circle(Vector2.ZERO, radius, color)
+	draw_circle(Vector2.ZERO, radius, Color(0.45, 0.8, 1.0))
 	if not _is_small:
 		draw_circle(Vector2.ZERO, radius * 0.4, Color(1.0, 1.0, 1.0, 0.9))
 
@@ -111,6 +148,7 @@ func _spawn_split_children() -> void:
 		var child := _child_scene.instantiate()
 		child.setup(dir, _speed * 0.9, _damage, true)
 		child.set_small_child()
+		child.set_visual_type("splitter_child")
 		child.global_position = global_position
 		get_tree().current_scene.add_child(child)
 

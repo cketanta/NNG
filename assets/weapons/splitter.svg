@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 分裂者：黄橙菱形核心 + 三条分叉箭头 -->
+  <polygon points="24,24 16,18 24,12 32,18" fill="#f0c040"/>
+  <polygon points="24,24 32,30 24,36 16,30" fill="#f0a030"/>
+  <path d="M30 18 L44 4 L40 16 Z" fill="#ffd460"/>
+  <path d="M32 24 L46 24 L42 25 Z" fill="#ffd460"/>
+  <path d="M30 30 L44 44 L40 32 Z" fill="#ffd460"/>
+</svg>

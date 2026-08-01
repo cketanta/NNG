@@ -8,30 +8,42 @@ signal attack_mode_changed(mode: int)
 
 @export var attack_mode: AttackMode = AttackMode.AUTO
 
-var _weapons: Array[Node] = []
+const RING_RADIUS := 34.0  # 武器环绕玩家的半径，避免贴图堆叠
+
+var _weapons: Array[Node2D] = []
+var _ring_angle := 0.0  # 武器环自转角（缓慢旋转）
 
 func _ready() -> void:
 	for child in get_children():
 		if child.has_method("set_aim_direction") and child.has_method("set_firing"):
-			_weapons.append(child)
+			_weapons.append(child as Node2D)
 
 func _process(_delta: float) -> void:
 	var player := get_parent() as CharacterBody2D
 	if not is_instance_valid(player):
 		return
 
-	var aim_dir: Vector2
-	if attack_mode == AttackMode.AUTO:
-		aim_dir = _nearest_enemy_dir(player)
-	else:
-		aim_dir = (get_global_mouse_position() - player.global_position).normalized()
+	# 武器均匀分布在玩家周围的圆周上，缓慢自转，避免贴图堆在一起。
+	_ring_angle += _delta * 0.5
+	for i in range(_weapons.size()):
+		_weapons[i].position = Vector2.from_angle(_ring_angle + TAU * float(i) / float(_weapons.size())) * RING_RADIUS
 
-	var firing := aim_dir != Vector2.ZERO
-	if attack_mode == AttackMode.MANUAL:
-		firing = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
+	var target_pos: Vector2
+	if attack_mode == AttackMode.AUTO:
+		target_pos = _nearest_enemy_pos(player)
+	else:
+		target_pos = get_global_mouse_position()
 
 	for weapon in _weapons:
-		weapon.set_aim_direction(aim_dir)
+		# 每把武器单独瞄准：从武器自身位置指向目标，避免各武器子弹平行。
+		var to_target := target_pos - weapon.global_position
+		var wdir := Vector2.ZERO
+		if to_target.is_finite() and to_target.length_squared() > 0.0001:
+			wdir = to_target.normalized()
+		weapon.set_aim_direction(wdir)
+		var firing := wdir != Vector2.ZERO
+		if attack_mode == AttackMode.MANUAL:
+			firing = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 		weapon.set_firing(firing)
 		weapon.set_level(player.weapon_levels.get(weapon.weapon_id, 1))
 		weapon.set_stats(player.attack_speed_mult, player.attack_range_mult, player.damage_mult)
@@ -45,15 +57,14 @@ func toggle_mode() -> void:
 	attack_mode = AttackMode.MANUAL if attack_mode == AttackMode.AUTO else AttackMode.AUTO
 	attack_mode_changed.emit(attack_mode)
 
-func _nearest_enemy_dir(player: Node2D) -> Vector2:
-	var best_dir := Vector2.ZERO
+func _nearest_enemy_pos(player: Node2D) -> Vector2:
+	var best_pos := Vector2.INF  # 无敌人时保持无穷，调用方据此不开火
 	var best_dist_sq := INF
 	for enemy: Node2D in get_tree().get_nodes_in_group("enemies"):
 		if not is_instance_valid(enemy):
 			continue
-		var delta_v := enemy.global_position - player.global_position
-		var dist_sq := delta_v.length_squared()
+		var dist_sq := enemy.global_position.distance_squared_to(player.global_position)
 		if dist_sq < best_dist_sq:
 			best_dist_sq = dist_sq
-			best_dir = delta_v.normalized()
-	return best_dir
+			best_pos = enemy.global_position
+	return best_pos

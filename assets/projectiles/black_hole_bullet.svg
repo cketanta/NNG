@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+  <!-- 黑洞枪弹：深紫实心 + 亮紫细环 -->
+  <circle cx="12" cy="12" r="9" fill="#1a1030"/>
+  <circle cx="12" cy="12" r="6.5" fill="none" stroke="#a45cff" stroke-width="2.5"/>
+  <circle cx="12" cy="12" r="3" fill="#e8dcff"/>
+</svg>
