@@ -59,6 +59,13 @@ func toggle_mode() -> void:
 	attack_mode = AttackMode.MANUAL if attack_mode == AttackMode.AUTO else AttackMode.AUTO
 	attack_mode_changed.emit(attack_mode)
 
+## 停止整条武器链：停掉 WeaponManager 与所有子武器。
+## 仅停 WeaponManager 不够——子武器自己的 _process 会保留最后的 _firing 继续开火。
+func halt() -> void:
+	for weapon in _weapons:
+		weapon.set_process(false)
+	set_process(false)
+
 func _nearest_enemy_pos(player: Node2D) -> Vector2:
 	var best_pos := Vector2.INF  # 无敌人时保持无穷，调用方据此不开火
 	var best_dist_sq := INF

@@ -31,6 +31,7 @@ var game_state := GameState.START
 var talent_tree: TalentTree
 var difficulty_id := "normal"
 var difficulty: Dictionary = DIFFICULTIES["normal"]
+var test_mode := false  # 测试模式：本局可按 L 打开调试面板
 
 # --- 商店道具（每波随机 5 个） ---
 var shop_item_offerings: Array[String] = []
@@ -47,6 +48,7 @@ var bought_items_this_wave: Dictionary = {}  # 本波已购买的道具（每波
 @onready var start_panel: StartPanel = $HUD/StartPanel
 @onready var difficulty_panel: DifficultyPanel = $HUD/DifficultyPanel
 @onready var pause_panel: PausePanel = $HUD/PausePanel
+@onready var debug_panel: DebugPanel = $HUD/DebugPanel
 
 func _ready() -> void:
 	talent_tree = TalentTree.new()
@@ -72,6 +74,7 @@ func _ready() -> void:
 	start_panel.setup(self)
 	difficulty_panel.setup(self)
 	pause_panel.setup(self)
+	debug_panel.setup(self)
 
 	_apply_difficulty_to_spawner()
 	open_difficulty()
@@ -86,13 +89,17 @@ func _process(delta: float) -> void:
 		end_wave()
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("toggle_backpack") and game_state == GameState.COMBAT:
+	if event.is_action_pressed("toggle_backpack") and game_state == GameState.COMBAT and not debug_panel.visible:
 		get_viewport().set_input_as_handled()
 		open_backpack()
+	elif event.is_action_pressed("toggle_debug") and test_mode and game_state == GameState.COMBAT \
+			and not backpack_panel.visible and not pause_panel.visible:
+		get_viewport().set_input_as_handled()
+		open_debug()
 	elif event.is_action_pressed("ui_cancel") and game_state == GameState.COMBAT:
 		# 已有面板打开（背包/暂停等）时，Esc 交给面板自己处理返回上一级（回到游戏），不弹暂停菜单。
 		# 面板在 _unhandled_input 里已 set_input_as_handled，正常不会走到这里；这里再兜底判断一次。
-		if not backpack_panel.visible and not pause_panel.visible:
+		if not backpack_panel.visible and not pause_panel.visible and not debug_panel.visible:
 			get_viewport().set_input_as_handled()
 			open_pause()
 
@@ -115,6 +122,15 @@ func open_difficulty() -> void:
 func choose_difficulty(id: String) -> void:
 	difficulty_id = id
 	difficulty = DIFFICULTIES[id]
+	_apply_difficulty_to_spawner()
+	difficulty_panel.visible = false
+	open_start()
+
+## 测试模式：不选难度，按普通倍率进入选武器；本局可按 L 打开调试面板。
+func choose_test_mode() -> void:
+	test_mode = true
+	difficulty_id = "normal"
+	difficulty = DIFFICULTIES["normal"]
 	_apply_difficulty_to_spawner()
 	difficulty_panel.visible = false
 	open_start()
@@ -143,6 +159,7 @@ func start_with_weapon(weapon_id: String) -> void:
 	difficulty_panel.visible = false
 	start_panel.visible = false
 	get_tree().paused = false
+	player.visible = true  # 开局菜单结束，进入战斗才渲染玩家
 	start_next_wave()
 
 # --- 波次流程 ---
@@ -295,6 +312,61 @@ func close_backpack() -> void:
 	if auto_pause_menus:
 		get_tree().paused = false
 
+# --- 调试面板（测试模式） ---
+
+func open_debug() -> void:
+	if auto_pause_menus:
+		get_tree().paused = true
+	debug_panel.visible = true
+	debug_panel.refresh()
+
+func close_debug() -> void:
+	debug_panel.visible = false
+	if auto_pause_menus:
+		get_tree().paused = false
+
+## 调试：设置当前波数并立即以新波次强度重开（清掉场上怪）。
+func set_wave_number(n: int) -> void:
+	wave_number = maxi(n, 1)
+	_clear_remaining_enemies()
+	spawner.begin_wave(wave_number)
+	hud.update_wave(wave_number)
+
+## 调试：设置每波持续时间（秒）。
+func set_wave_duration(seconds: float) -> void:
+	wave_duration = maxf(seconds, 1.0)
+
+## 调试：无限获取道具（跳过金币/唯一/每波限制），直接累加并应用玩家侧效果。
+func debug_give_item(item_id: String) -> void:
+	player.buy_item(item_id)
+	if item_id == "ring":
+		spawner.set_spawn_rate_mult(2.0)  # 咒戒：刷怪效率 ×2
+	debug_panel.refresh()
+
+## 调试：移除道具（减计数并撤销玩家侧效果）。
+func debug_remove_item(item_id: String) -> void:
+	var before: int = player.item_counts.get(item_id, 0)
+	player.remove_item(item_id)
+	if item_id == "ring" and before == 1:
+		spawner.set_spawn_rate_mult(1.0)  # 咒戒减到 0：恢复刷怪效率
+	debug_panel.refresh()
+
+## 调试：把某道具数量直接设为 count。按差额逐次增减，保证玩家侧效果与计数一致。
+func debug_set_item_count(item_id: String, count: int) -> void:
+	var current: int = player.item_counts.get(item_id, 0)
+	var target := maxi(count, 0)
+	if target > current:
+		for i in range(target - current):
+			player.buy_item(item_id)
+		if item_id == "ring" and target > 0:
+			spawner.set_spawn_rate_mult(2.0)
+	elif target < current:
+		for i in range(current - target):
+			player.remove_item(item_id)
+		if item_id == "ring" and target <= 0:
+			spawner.set_spawn_rate_mult(1.0)
+	debug_panel.refresh()
+
 # --- 暂停菜单 ---
 
 func open_pause() -> void:
@@ -330,6 +402,10 @@ func end_game(reason: String) -> void:
 	game_state = GameState.GAMEOVER
 	spawner.end_wave()
 	get_tree().paused = false  # 主动结束需先解除暂停，结算按钮才可点
+	# 结束本局：停止整条武器链（主动结束玩家未死亡，否则武器会保留 _firing 继续开火）。
+	var wm := player.get_node_or_null("WeaponManager")
+	if wm != null:
+		wm.call("halt")
 	hud.show_result(reason, difficulty_name(difficulty_id), kills, wave_number,
 		player.level, player.gold, elapsed)
 

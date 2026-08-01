@@ -40,6 +40,23 @@ static func section(index: int) -> StyleBoxFlat:
 		SECTION_BORDERS[index % SECTION_BORDERS.size()],
 		8, 2)
 
+## 道具条目卡片容器：圆角底色 + 细边框。上下堆叠时每张卡片自带边框，一眼可分。
+static func item_card() -> PanelContainer:
+	var card := PanelContainer.new()
+	card.add_theme_stylebox_override("panel", panel(
+		Color(0.16, 0.18, 0.24, 0.95),
+		Color(0.40, 0.46, 0.62, 0.9),
+		6, 1))
+	return card
+
+## 卡片内一行居中文本（默认亮色，可传稀有度等颜色）。
+static func card_label(text: String, color: Color = Color(0.9, 0.93, 0.98)) -> Label:
+	var label := Label.new()
+	label.text = text
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.add_theme_color_override("font_color", color)
+	return label
+
 ## 带底色横条的分区标题（PanelContainer + 居中 Label）。
 static func title_bar(text: String) -> Control:
 	var bar := PanelContainer.new()

@@ -42,6 +42,8 @@ var move_speed_bonus := 0          # 移速加算（跑鞋累计，基础 240）
 func _ready() -> void:
 	hp = max_hp
 	add_to_group("player")
+	# 初始隐藏：开局（难度/选武暂停）不渲染玩家，进入战斗后由 main 显示。
+	visible = false
 	hurtbox.body_entered.connect(_on_hurtbox_body_entered)
 	hurtbox.body_exited.connect(_on_hurtbox_body_exited)
 	hurtbox.area_entered.connect(_on_hurtbox_area_entered)
@@ -67,6 +69,55 @@ func gain_xp(amount: int) -> void:
 func gain_gold(amount: int) -> void:
 	gold += amount
 	gold_changed.emit(gold)
+
+# --- 调试用 setter（测试模式调试面板调用，各自发信号刷 HUD） ---
+
+func set_gold(value: int) -> void:
+	gold = maxi(value, 0)
+	gold_changed.emit(gold)
+
+func set_level(value: int) -> void:
+	level = maxi(value, 1)
+	xp = 0
+	xp_max = 5 * level
+	xp_changed.emit(xp, xp_max)
+
+func set_max_hp(value: int) -> void:
+	max_hp = maxi(value, 1)
+	hp = mini(hp, max_hp)
+	hp_changed.emit(hp, max_hp)
+
+func set_defense(value: int) -> void:
+	defense = maxi(value, 0)
+
+func set_speed(value: float) -> void:
+	speed = maxf(value, 0.0)
+
+func set_luck(value: int) -> void:
+	luck = maxi(value, 0)
+
+func set_weapon_level(weapon_id: String, value: int) -> void:
+	weapon_levels[weapon_id] = maxi(value, 0)  # 武器节点由 WeaponManager 每帧同步
+
+## 调试：移除道具（减计数并撤销玩家侧效果；武器侧效果由 WeaponManager 每帧按 item_counts 重算）。
+func remove_item(item_id: String) -> void:
+	var count: int = item_counts.get(item_id, 0)
+	if count <= 0:
+		return
+	item_counts[item_id] = count - 1
+	match ItemDefs.kind(item_id):
+		"move_speed":
+			move_speed_bonus = maxi(move_speed_bonus - 10, 0)
+		"armor":
+			defense = maxi(defense - 1, 0)
+		"luck":
+			luck = maxi(luck - 1, 0)
+		"max_hp":
+			max_hp = maxi(max_hp - 10, 1)
+			hp = mini(hp, max_hp)
+			hp_changed.emit(hp, max_hp)
+		"heal":
+			pass  # 已回的血不扣回，仅减计数
 
 func add_weapon_level(weapon_id: String) -> void:
 	weapon_levels[weapon_id] = weapon_levels.get(weapon_id, 1) + 1
@@ -118,6 +169,10 @@ func die() -> void:
 	set_physics_process(false)
 	visible = false
 	hurtbox.set_deferred("monitoring", false)
+	# 死亡后停止整条武器链（WeaponManager + 子武器），否则武器会保留 _firing 继续开火。
+	var weapon_manager_node := get_node_or_null("WeaponManager")
+	if weapon_manager_node != null:
+		weapon_manager_node.call("halt")
 
 func _draw() -> void:
 	# 占位蓝色圆；以后换成贴图。

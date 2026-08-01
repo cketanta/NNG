@@ -9,7 +9,7 @@ var _main: Main
 var _gold_label: Label
 var _stats_label: Label
 var _item_rows: Dictionary = {}    # 武器 id -> { name, effect, attr }（左侧武器展示）
-var _inventory_label: Label        # 道具栏（左侧，已拥有道具）
+var _inventory_box: VBoxContainer  # 道具栏（左侧，已拥有道具，每道具一张卡片）
 var _upgrade_rows: Dictionary = {} # 武器 id -> { name, cost, button }（右侧武器升级）
 var _shop_item_rows: Dictionary = {}  # 道具 id -> { name, effect, cost, button }（右侧道具购买）
 var _item_container: VBoxContainer
@@ -100,9 +100,8 @@ func _make_inventory_box() -> Control:
 	var v := VBoxContainer.new()
 	box.add_child(v)
 	v.add_child(_make_section_title("道具栏"))
-	_inventory_label = Label.new()
-	_inventory_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(_inventory_label)
+	_inventory_box = VBoxContainer.new()
+	v.add_child(_inventory_box)
 	return box
 
 func _make_upgrade_box() -> Control:
@@ -158,7 +157,7 @@ func refresh() -> void:
 		row.effect.text = _main.weapon_effect_text(weapon_id, level)
 		row.attr.text = _main.weapon_attr_text(weapon_id)
 	# 左侧道具栏
-	_inventory_label.text = _inventory_text()
+	_rebuild_inventory()
 	# 右侧武器升级
 	for weapon_id in _upgrade_rows:
 		var row: Dictionary = _upgrade_rows[weapon_id]
@@ -170,20 +169,27 @@ func refresh() -> void:
 	# 右侧道具购买
 	_rebuild_shop_items()
 
-## 左侧道具栏：已拥有道具，每行 名称 ×数量 + 效果（不重复列）。
-func _inventory_text() -> String:
-	var lines: Array[String] = []
+## 左侧道具栏：已拥有道具，每个道具一张卡片（名称×数量 + 效果）。
+func _rebuild_inventory() -> void:
+	for child in _inventory_box.get_children():
+		child.queue_free()
+	var owned: Array[String] = []
 	for item_id in ItemDefs.all_ids():
+		if _main.player.item_counts.get(item_id, 0) > 0:
+			owned.append(item_id)
+	if owned.is_empty():
+		_inventory_box.add_child(UiStyle.card_label("暂无道具"))
+		return
+	for item_id in owned:
+		var card := UiStyle.item_card()
+		var v := VBoxContainer.new()
+		card.add_child(v)
 		var count: int = _main.player.item_counts.get(item_id, 0)
-		if count < 1:
-			continue
-		lines.append("[%s] %s ×%d\n%s" % [
-			ItemDefs.rarity_name(item_id), ItemDefs.name(item_id), count,
-			ItemDefs.desc(item_id),
-		])
-	if lines.is_empty():
-		return "暂无道具"
-	return "\n".join(lines)
+		v.add_child(UiStyle.card_label("[%s] %s ×%d" % [
+			ItemDefs.rarity_name(item_id), ItemDefs.name(item_id), count],
+			ItemDefs.rarity_color(item_id)))
+		v.add_child(UiStyle.card_label(ItemDefs.desc(item_id)))
+		_inventory_box.add_child(card)
 
 ## 右侧道具购买：按本波刷出的道具重建。已购买的唯一道具不显示；本波已购的道具置灰「已购买」。
 func _rebuild_shop_items() -> void:
@@ -193,7 +199,10 @@ func _rebuild_shop_items() -> void:
 	for item_id in _main.shop_item_offerings:
 		if ItemDefs.is_unique(item_id) and item_id in _main.purchased_unique:
 			continue
+		# 每个可购道具一张卡片，与左侧库存区风格一致。
+		var card := UiStyle.item_card()
 		var row_box := VBoxContainer.new()
+		card.add_child(row_box)
 		var name_label := Label.new()
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		name_label.add_theme_color_override("font_color", ItemDefs.rarity_color(item_id))
@@ -208,7 +217,7 @@ func _rebuild_shop_items() -> void:
 		buy.text = "购买"
 		buy.pressed.connect(_on_buy_item_pressed.bind(item_id))
 		row_box.add_child(buy)
-		_item_container.add_child(row_box)
+		_item_container.add_child(card)
 
 		name_label.text = "[%s] %s" % [ItemDefs.rarity_name(item_id), ItemDefs.name(item_id)]
 		effect_label.text = ItemDefs.desc(item_id)

@@ -4,7 +4,7 @@ extends Node2D
 
 const LAYER_WEAPON := 6  # 武器命中区所在的碰撞层（1 基）
 const LAYER_ENEMY := 3   # 敌人所在的碰撞层（1 基）
-const TEXTURE := preload("res://assets/weapons/whip.svg")  # 武器本体贴图
+var _texture: Texture2D  # 武器本体贴图（懒加载：仅装备 level>=1 首次绘制时加载）
 
 var weapon_id := "whip"
 
@@ -47,6 +47,10 @@ func set_stats(final_damage: int, final_cooldown: float, final_speed: float, fin
 	cooldown = final_cooldown
 	projectile_speed = final_speed
 	melee_range = final_range
+
+func _ready() -> void:
+	# 初始隐藏：避免开局（难度/选武暂停）时未装备武器贴图渲染；由 _process 按等级显示。
+	visible = false
 
 func _process(delta: float) -> void:
 	if level < 1:
@@ -120,5 +124,7 @@ func _sector_points(inner_radius: float, outer_radius: float, arc: float) -> Pac
 	return points
 
 func _draw() -> void:
-	# 武器本体贴图：朝瞄准方向居中绘制。
-	draw_texture_rect(TEXTURE, Rect2(-22.0, -22.0, 44.0, 44.0), false)
+	# 武器本体贴图：朝瞄准方向居中绘制；首次可见时再加载，未装备武器不加载贴图。
+	if _texture == null:
+		_texture = load("res://assets/weapons/whip.svg")
+	draw_texture_rect(_texture, Rect2(-22.0, -22.0, 44.0, 44.0), false)

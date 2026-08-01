@@ -54,6 +54,10 @@ func _process(_delta: float) -> bool:
 			print("[OK] start_with_weapon begins combat (wave 1, unpaused)")
 		else:
 			_failures.append("combat not started (paused=%s state=%d wave=%d)" % [paused, _main.get("game_state"), _main.get("wave_number")])
+		if _player.visible:
+			print("[OK] player visible after combat starts")
+		else:
+			_failures.append("player hidden after combat starts")
 		var levels: Dictionary = _player.get("weapon_levels")
 		if levels["whip"] == 1 and levels["staff"] == 0:
 			print("[OK] whip=1 staff=0")

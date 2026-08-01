@@ -23,6 +23,22 @@ func _process(_delta: float) -> bool:
 			print("[OK] run starts on the difficulty panel")
 		else:
 			_failures.append("difficulty panel not shown first")
+		# 暂停开局时背景不应渲染武器贴图：所有武器初始隐藏。
+		var wm: Node = _main.get_node("Player/WeaponManager")
+		var any_visible := false
+		for weapon in wm.get_children():
+			if weapon is CanvasItem and weapon.visible:
+				any_visible = true
+		if not any_visible:
+			print("[OK] no weapon textures shown on difficulty panel")
+		else:
+			_failures.append("weapon visible on difficulty panel")
+		# 开局菜单阶段玩家本体也不渲染。
+		var player: Node2D = _main.get_node("Player")
+		if not player.visible:
+			print("[OK] player hidden on difficulty panel")
+		else:
+			_failures.append("player visible on difficulty panel")
 		_main.choose_difficulty("hard")
 	elif _frames == 3:
 		if _main.get("difficulty_id") == "hard":

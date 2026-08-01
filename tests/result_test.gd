@@ -29,6 +29,16 @@ func _process(_delta: float) -> bool:
 		_main.end_game_from_pause()
 	elif _frames == 8:
 		_check_result("本局结束", "paused=" + str(paused))
+		# 主动结束路径：玩家未死亡，整条武器链也应停火。
+		var wm: Node = _player.get_node("WeaponManager")
+		var any_weapon_processing := false
+		for weapon in wm.get_children():
+			if weapon is Node and weapon.is_processing():
+				any_weapon_processing = true
+		if not wm.is_processing() and not any_weapon_processing:
+			print("[OK] weapon chain stopped after end game")
+		else:
+			_failures.append("weapon chain still processing after end game (wm=%s)" % wm.is_processing())
 		# 死亡路径：结算标题变为「游戏结束」。
 		_player.take_damage(999)
 	elif _frames == 12:

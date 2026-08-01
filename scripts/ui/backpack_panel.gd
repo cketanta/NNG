@@ -7,8 +7,9 @@ extends CenterContainer
 var _main: Main
 var _gold_label: Label
 var _stats_label: Label
-var _weapon_rows: Dictionary = {}  # 武器 id -> { name, effect, attr }
-var _items_label: Label
+var _weapon_rows: Dictionary = {}  # 武器 id -> { name, effect, attr }（仅已获得武器）
+var _weapons_container: VBoxContainer  # 武器列（动态重建，未获得武器不显示）
+var _items_box: VBoxContainer  # 已拥有道具（每道具一张卡片）
 
 func setup(main: Main) -> void:
 	_main = main
@@ -62,17 +63,8 @@ func _make_weapons_box() -> Control:
 	var v := VBoxContainer.new()
 	box.add_child(v)
 	v.add_child(_make_section_title("武器"))
-	for weapon_id in _main.weapon_ids():
-		var name_label := Label.new()
-		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		v.add_child(name_label)
-		var effect_label := Label.new()
-		effect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		v.add_child(effect_label)
-		var attr_label := Label.new()
-		attr_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		v.add_child(attr_label)
-		_weapon_rows[weapon_id] = { "name": name_label, "effect": effect_label, "attr": attr_label }
+	_weapons_container = VBoxContainer.new()
+	v.add_child(_weapons_container)
 	return box
 
 func _make_items_box() -> Control:
@@ -82,62 +74,67 @@ func _make_items_box() -> Control:
 	var v := VBoxContainer.new()
 	box.add_child(v)
 	v.add_child(_make_section_title("道具"))
-	_items_label = Label.new()
-	_items_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	v.add_child(_items_label)
+	_items_box = VBoxContainer.new()
+	v.add_child(_items_box)
 	return box
 
 func refresh() -> void:
 	_gold_label.text = "金币: %d" % _main.player.gold
 	_stats_label.text = _main.player_stats_text()
-	for weapon_id in _weapon_rows:
-		var row: Dictionary = _weapon_rows[weapon_id]
+	_rebuild_weapons()
+	_rebuild_items()
+
+## 武器列：只显示已获得的武器（level>=1），未获得武器不占行。
+func _rebuild_weapons() -> void:
+	for child in _weapons_container.get_children():
+		child.queue_free()
+	_weapon_rows.clear()
+	var owned_count := 0
+	for weapon_id in _main.weapon_ids():
 		var level: int = _main.player.weapon_levels.get(weapon_id, 0)
 		if level < 1:
-			row.name.text = "%s  未获得" % _main.weapon_name(weapon_id)
-			row.effect.text = ""
-			row.attr.text = ""
-		else:
-			row.name.text = "%s  Lv.%d" % [_main.weapon_name(weapon_id), level]
-			row.effect.text = _main.weapon_effect_text(weapon_id, level)
-			row.attr.text = _main.weapon_attr_text(weapon_id)
-	_items_label.text = _items_text()
-
-## 已拥有道具：每个道具一行（含数量与总加成，不重复列）。
-func _items_text() -> String:
-	var lines: Array[String] = []
-	for item_id in ItemDefs.all_ids():
-		var count: int = _main.player.item_counts.get(item_id, 0)
-		if count < 1:
 			continue
-		lines.append("[%s] %s ×%d\n%s\n%s" % [
-			ItemDefs.rarity_name(item_id), ItemDefs.name(item_id), count,
-			ItemDefs.desc(item_id), _item_total_text(item_id),
-		])
-	if lines.is_empty():
-		return "暂无道具"
-	return "\n".join(lines)
+		owned_count += 1
+		var name_label := Label.new()
+		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_weapons_container.add_child(name_label)
+		var effect_label := Label.new()
+		effect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_weapons_container.add_child(effect_label)
+		var attr_label := Label.new()
+		attr_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_weapons_container.add_child(attr_label)
+		_weapon_rows[weapon_id] = { "name": name_label, "effect": effect_label, "attr": attr_label }
+		name_label.text = "%s  Lv.%d" % [_main.weapon_name(weapon_id), level]
+		effect_label.text = _main.weapon_effect_text(weapon_id, level)
+		attr_label.text = _main.weapon_attr_text(weapon_id)
+	if owned_count == 0:
+		var none := Label.new()
+		none.text = "暂无武器"
+		none.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		_weapons_container.add_child(none)
 
-## 每种道具的总加成（乘算显示底数与次数）。
-func _item_total_text(item_id: String) -> String:
-	var count: int = _main.player.item_counts.get(item_id, 0)
-	var kind := ItemDefs.kind(item_id)
-	match kind:
-		"ranged_flat", "melee_flat", "ranged_speed", "move_speed", "armor", "luck":
-			return "当前总加成 ×%d" % count
-		"max_hp":
-			return "血量上限 +%d" % (10 * count)
-		"heal":
-			return "累计回复 %d 血" % (10 * count)
-		"ranged_mult", "melee_mult":
-			return "攻击 ×1.1^%d" % count
-		"melee_range_mult":
-			return "距离 ×1.1^%d" % count
-		"ranged_cooldown", "melee_cooldown":
-			return "冷却 ×0.9^%d" % count
-		"ring":
-			return "刷怪 ×2，全武器攻击 ×1.5"
-	return ""
+## 已拥有道具：每个道具一张卡片（名称×数量 + 效果 + 总加成），上下堆叠以卡片边框区分。
+func _rebuild_items() -> void:
+	for child in _items_box.get_children():
+		child.queue_free()
+	var owned: Array[String] = []
+	for item_id in ItemDefs.all_ids():
+		if _main.player.item_counts.get(item_id, 0) > 0:
+			owned.append(item_id)
+	if owned.is_empty():
+		_items_box.add_child(UiStyle.card_label("暂无道具"))
+		return
+	for item_id in owned:
+		var card := UiStyle.item_card()
+		var v := VBoxContainer.new()
+		card.add_child(v)
+		var count: int = _main.player.item_counts.get(item_id, 0)
+		v.add_child(UiStyle.card_label("[%s] %s ×%d" % [
+			ItemDefs.rarity_name(item_id), ItemDefs.name(item_id), count],
+			ItemDefs.rarity_color(item_id)))
+		v.add_child(UiStyle.card_label(ItemDefs.desc(item_id)))
+		_items_box.add_child(card)
 
 func _on_close_pressed() -> void:
 	_main.close_backpack()

@@ -45,10 +45,11 @@ func _process(_delta: float) -> bool:
 			print("[OK] backpack lists owned weapons")
 		else:
 			_failures.append("weapons row '%s / %s'" % [whip_row["name"].text, whip_row["effect"].text])
-		if "跑鞋" in backpack._items_label.text and "×1" in backpack._items_label.text:
+		var items_text := _gather_text(backpack._items_box)
+		if "跑鞋" in items_text and "×1" in items_text:
 			print("[OK] backpack lists item with count")
 		else:
-			_failures.append("item label '%s'" % backpack._items_label.text)
+			_failures.append("items text '%s'" % items_text)
 		if backpack.get("_tree_ui") == null:
 			print("[OK] no talent tree in backpack")
 		else:
@@ -62,6 +63,15 @@ func _process(_delta: float) -> bool:
 		_finish()
 		return true
 	return false
+
+## 递归收集某容器内所有 Label 文本，用于断言卡片化的道具区内容。
+func _gather_text(node: Node) -> String:
+	var out := ""
+	if node is Label:
+		out += node.text + "\n"
+	for child in node.get_children():
+		out += _gather_text(child)
+	return out
 
 func _finish() -> void:
 	if _failures.is_empty():

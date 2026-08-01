@@ -6,6 +6,41 @@
 
 ---
 
+## v1.1.2
+
+**日期**：2026-08-01
+**状态**：道具块状卡片显示 + 测试模式调试面板（L 键）+ 背包/武器/玩家渲染优化 + 游戏结束整链停火。
+
+**包含内容**：
+- 道具显示块状化：`UiStyle.item_card()/card_label()` 新增，背包道具区、商店左侧道具栏、商店右侧购买区全部改为每道具一张圆角卡片（稀有度色名称×数量 + 描述），上下堆叠以卡片边框区分
+- 测试模式：难度面板新增第 4 项「测试模式」，直接进选武器开局（普通倍率），本局可按 L 打开调试面板
+- 调试面板（`debug_panel.gd`，L 唤出、暂停态、ScrollContainer 滚动）：调 当前波数（立即清怪重开）/ 每波时间 / 金币 / 角色等级 / 角色属性（移速/防御/血量/幸运）/ 武器等级（下一帧由 WeaponManager 自动同步）；道具区每行 [-1][数量输入][+1]，可无限增/减/直接输入数量
+- 背包武器区：只显示已获得（level>=1）武器，未获得武器不占行（空时显示「暂无武器」）
+- 渲染优化：武器贴图由 `const preload` 改懒加载（首次可见绘制时才 load 并缓存，未装备武器不加载）；武器与玩家初始 `visible=false`，开局菜单（难度/选武）阶段不渲染，进入战斗才显示
+- 游戏结束停火（真实根因）：子武器节点独立 `_process` 会保留最后的 `_firing` 继续开火；新增 `WeaponManager.halt()` 停整条武器链（WeaponManager + 所有子武器），`player.die()` 与 `main.end_game()`（死亡/主动结束）均调用
+- 背包道具卡片移除「总加成」显示行
+- 调试用 setter：`player.gd` 新增 `set_gold/set_level/set_max_hp/set_defense/set_speed/set_luck/set_weapon_level/remove_item`，各自 emit 信号自动刷 HUD；`main.debug_set_item_count` 按差额逐次增减保证玩家侧效果与计数一致
+
+**关键文件**（回退时对照）：
+- `scripts/ui/debug_panel.gd`（新增）：测试模式调试面板
+- `scripts/weapons/weapon_manager.gd`：新增 `halt()` 停整条武器链
+- `scripts/player.gd`：调试 setter + `remove_item` + `die()` 停武器链
+- `scripts/ui/backpack_panel.gd`：道具卡片化、武器区动态只显示已获得、移除总加成
+- `scripts/ui/shop_panel.gd`：库存区/购买区卡片化
+- `scripts/ui/ui_style.gd`：新增 `item_card/card_label`
+- `scripts/ui/difficulty_panel.gd`：新增「测试模式」按钮
+- `scripts/weapons/whip/staff/splitter/black_hole_gun.gd`：贴图懒加载 + 初始隐藏
+- `scenes/main.tscn`：新增 DebugPanel 节点
+- `project.godot`：新增 `toggle_debug` action（L 键）
+- `tests/debug_test.gd`（新增）、`combat/result/difficulty/start/debug` 断言扩展
+
+**已知问题（本版本不带）**：
+- 分裂者分裂小弹出生即被母弹命中点敌人消耗（实际存活数偏少）——1.0.0 已知，未修
+- 分裂者全向环密度饱和后视觉难分辨数量——按用户选择不改
+- 高密度+满级武器长时间下存在物理引擎卡死隐患——1.0.0 已知，未修
+
+**备注**：全量 13 个无头测试全过（新增 debug_test；扩展 combat/result/difficulty/start/debug 断言）。
+
 ## v1.1.1
 
 **日期**：2026-08-01

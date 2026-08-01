@@ -11,6 +11,7 @@
 [ext_resource type="Script" uid="uid://dvajhqus8ettj" path="res://scripts/ui/start_panel.gd" id="9_start"]
 [ext_resource type="Script" uid="uid://jyhto8uafimi" path="res://scripts/ui/difficulty_panel.gd" id="10_difficulty"]
 [ext_resource type="Script" uid="uid://dl4pnjklfeomm" path="res://scripts/ui/pause_panel.gd" id="11_pause"]
+[ext_resource type="Script" uid="uid://inbv73ogdq2p" path="res://scripts/ui/debug_panel.gd" id="12_debug"]
 
 [sub_resource type="SystemFont" id="SystemFont_cjk"]
 font_names = PackedStringArray("Microsoft YaHei", "Segoe UI", "Arial")
@@ -264,6 +265,17 @@ grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("8_theme")
 script = ExtResource("11_pause")
+
+[node name="DebugPanel" type="CenterContainer" parent="HUD" unique_id=1234567890]
+process_mode = 3
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("8_theme")
+script = ExtResource("12_debug")
 
 [connection signal="pressed" from="HUD/GameOverPanel/CenterBox/RestartButton" to="HUD" method="_on_restart_button_pressed"]
 [connection signal="pressed" from="HUD/GameOverPanel/CenterBox/QuitButton" to="HUD" method="_on_quit_button_pressed"]

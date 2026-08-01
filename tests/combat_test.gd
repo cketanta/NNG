@@ -48,6 +48,16 @@ func _process(_delta: float) -> bool:
 			print("[OK] game over panel shown after player death")
 		else:
 			_failures.append("game over panel not shown after player death")
+		# 死亡后玩家不再攻击：整条武器链（WeaponManager + 子武器）停止处理。
+		var wm: Node = _player.get_node("WeaponManager")
+		var any_weapon_processing := false
+		for weapon in wm.get_children():
+			if weapon is Node and weapon.is_processing():
+				any_weapon_processing = true
+		if not wm.is_processing() and not any_weapon_processing:
+			print("[OK] weapon chain stopped after death")
+		else:
+			_failures.append("weapon chain still processing after death (wm=%s)" % wm.is_processing())
 		_finish()
 		return true
 	return false

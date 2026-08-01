@@ -27,8 +27,16 @@ func _build_ui() -> void:
 		btn.pressed.connect(_on_choose.bind(diff_id))
 		vbox.add_child(btn)
 
+	var test_btn := Button.new()
+	test_btn.text = "测试模式（可调波数/金币/属性/武器/无限道具）"
+	test_btn.pressed.connect(_on_test_mode_pressed)
+	vbox.add_child(test_btn)
+
 func _on_choose(diff_id: String) -> void:
 	_main.choose_difficulty(diff_id)
+
+func _on_test_mode_pressed() -> void:
+	_main.choose_test_mode()
 
 func _make_title(text: String) -> Label:
 	return UiStyle.big_title(text)
