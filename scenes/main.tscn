@@ -115,6 +115,7 @@ text = "WASD 移动 | Tab 模式 | B 背包 | Esc 菜单"
 horizontal_alignment = 2
 
 [node name="GameOverPanel" type="ColorRect" parent="HUD" unique_id=1323484143]
+process_mode = 3
 visible = false
 anchors_preset = 15
 anchor_right = 1.0
@@ -146,6 +147,42 @@ theme_override_font_sizes/font_size = 22
 text = "存活时间 00:00"
 horizontal_alignment = 1
 
+[node name="GameOverDifficulty" type="Label" parent="HUD/GameOverPanel/CenterBox"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 20
+text = ""
+horizontal_alignment = 1
+
+[node name="GameOverKills" type="Label" parent="HUD/GameOverPanel/CenterBox"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 20
+text = ""
+horizontal_alignment = 1
+
+[node name="GameOverWave" type="Label" parent="HUD/GameOverPanel/CenterBox"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 20
+text = ""
+horizontal_alignment = 1
+
+[node name="GameOverLevel" type="Label" parent="HUD/GameOverPanel/CenterBox"]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 20
+text = ""
+horizontal_alignment = 1
+
+[node name="GameOverGold" type="Label" parent="HUD/GameOverPanel/CenterBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 20
+text = ""
+horizontal_alignment = 1
+
 [node name="RestartButton" type="Button" parent="HUD/GameOverPanel/CenterBox" unique_id=1339673870]
 custom_minimum_size = Vector2(200, 0)
 layout_mode = 2
@@ -153,6 +190,14 @@ size_flags_horizontal = 4
 theme_override_fonts/font = SubResource("SystemFont_cjk")
 theme_override_font_sizes/font_size = 22
 text = "重新开始"
+
+[node name="QuitButton" type="Button" parent="HUD/GameOverPanel/CenterBox"]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 22
+text = "退出游戏"
 
 [node name="ShopPanel" type="CenterContainer" parent="HUD" unique_id=670967308]
 process_mode = 3
@@ -221,3 +266,4 @@ theme = ExtResource("8_theme")
 script = ExtResource("11_pause")
 
 [connection signal="pressed" from="HUD/GameOverPanel/CenterBox/RestartButton" to="HUD" method="_on_restart_button_pressed"]
+[connection signal="pressed" from="HUD/GameOverPanel/CenterBox/QuitButton" to="HUD" method="_on_quit_button_pressed"]

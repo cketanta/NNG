@@ -24,6 +24,10 @@ func _build_ui() -> void:
 	resume.text = "继续游戏"
 	resume.pressed.connect(_on_resume_pressed)
 	vbox.add_child(resume)
+	var end_btn := Button.new()
+	end_btn.text = "结束该局"
+	end_btn.pressed.connect(_on_end_pressed)
+	vbox.add_child(end_btn)
 	var restart := Button.new()
 	restart.text = "重新开始"
 	restart.pressed.connect(_on_restart_pressed)
@@ -39,6 +43,10 @@ func refresh() -> void:
 func _on_resume_pressed() -> void:
 	_main.close_pause()
 
+## 结束该局：直接进入结算界面（不重开）。
+func _on_end_pressed() -> void:
+	_main.end_game_from_pause()
+
 func _on_restart_pressed() -> void:
 	get_tree().reload_current_scene()
 
@@ -49,10 +57,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
 	if event.is_action_pressed("ui_cancel"):
+		# 标记已处理，阻断同一事件继续传给 main，防止 main 再次弹暂停。
+		get_viewport().set_input_as_handled()
 		_main.close_pause()
 
 func _make_title(text: String) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	return label
+	return UiStyle.big_title(text)

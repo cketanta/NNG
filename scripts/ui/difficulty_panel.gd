@@ -31,7 +31,4 @@ func _on_choose(diff_id: String) -> void:
 	_main.choose_difficulty(diff_id)
 
 func _make_title(text: String) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	return label
+	return UiStyle.big_title(text)

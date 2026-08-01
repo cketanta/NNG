@@ -6,6 +6,34 @@
 
 ---
 
+## v1.1.1
+
+**日期**：2026-08-01
+**状态**：UI 暗色主题美化 + 结算界面（含暂停菜单「结束该局」）+ Esc 交互修复。
+
+**包含内容**：
+- UI 美化：新增 `scripts/ui/ui_style.gd` 程序化 StyleBoxFlat 工厂（面板/分节/标题栏），`themes/cjk_theme.tres` 统一暗色主题（Panel/Button/ProgressBar/Label），HUD 血条/经验条填充色、金币底框、悬浮文字阴影一并配套
+- 结算界面：增强 `GameOverPanel`（加 `process_mode=3`，暂停态下可点按钮），死亡与主动结束共用，显示 难度/击杀/到达波次/玩家等级/金币/存活时间，新增「退出游戏」按钮
+- 暂停菜单「结束该局」：暂停菜单新增按钮 → `end_game_from_pause()` → 统一结算流程 `end_game(reason)`（死亡=「游戏结束」，主动结束=「本局结束」）
+- Esc 交互修复（真实根因）：Godot 输入分发为「深度优先逆序」——面板先于 main 收到同一事件；各面板处理 Esc 后加 `get_viewport().set_input_as_handled()` 阻断事件继续传给 main，避免 main 随后再弹暂停菜单（原表现为：暂停按 Esc 关掉又弹回、背包按 Esc 跳到暂停菜单）
+- Esc 效果：暂停菜单按 Esc → 回到游戏；背包/商店/天赋等面板按 Esc → 返回上一级（回到游戏），不弹暂停菜单
+
+**关键文件**（回退时对照）：
+- `scripts/ui/ui_style.gd`（新增）：StyleBoxFlat 工厂
+- `themes/cjk_theme.tres`：暗色主题
+- `scripts/hud.gd` + `scenes/main.tscn`：结算面板 + HUD 美化
+- `scripts/main.gd`：`end_game`/`end_game_from_pause` + `_unhandled_input` handled 标记
+- `scripts/ui/pause_panel.gd`：新增「结束该局」按钮 + Esc handled
+- `scripts/ui/backpack_panel.gd` / `shop_panel.gd` / `start_panel.gd` / `talent_panel.gd`：Esc handled 标记
+- `tests/result_test.gd`（新增）、`tests/pause_test.gd`（重写为真实分发顺序）
+
+**已知问题（本版本不带）**：
+- 分裂者分裂小弹出生即被母弹命中点敌人消耗（实际存活数偏少）——1.0.0 已知，未修
+- 分裂者全向环密度饱和后视觉难分辨数量——按用户选择不改
+- 高密度+满级武器长时间下存在物理引擎卡死隐患——1.0.0 已知，未修
+
+**备注**：13 个无头测试全过（新增 result_test；重写 pause_test 按真实输入分发顺序模拟 Esc，修复前该测试掩盖了双开 bug）。
+
 ## v1.1.0
 
 **日期**：2026-08-01

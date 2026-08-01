@@ -20,6 +20,8 @@ func _build() -> void:
 		title.text = "%s\n%s" % [branch.name, branch.desc]
 		title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		title.custom_minimum_size = Vector2(180, 0)
+		title.add_theme_font_size_override("font_size", 15)
+		title.add_theme_color_override("font_color", Color(0.75, 0.85, 1.0))
 		col.add_child(title)
 		var buttons: Array[Button] = []
 		for t in range(int(branch.tiers)):

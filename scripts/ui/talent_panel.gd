@@ -45,10 +45,9 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
 	if event.is_action_pressed("ui_cancel"):
+		# 标记已处理，阻断同一事件继续传给 main，防止 main 随后弹暂停。
+		get_viewport().set_input_as_handled()
 		_main.close_talent()
 
 func _make_title(text: String) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	return label
+	return UiStyle.big_title(text)

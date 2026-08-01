@@ -87,9 +87,14 @@ func _process(delta: float) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_backpack") and game_state == GameState.COMBAT:
+		get_viewport().set_input_as_handled()
 		open_backpack()
 	elif event.is_action_pressed("ui_cancel") and game_state == GameState.COMBAT:
-		open_pause()
+		# 已有面板打开（背包/暂停等）时，Esc 交给面板自己处理返回上一级（回到游戏），不弹暂停菜单。
+		# 面板在 _unhandled_input 里已 set_input_as_handled，正常不会走到这里；这里再兜底判断一次。
+		if not backpack_panel.visible and not pause_panel.visible:
+			get_viewport().set_input_as_handled()
+			open_pause()
 
 # --- 开局流程 ---
 
@@ -320,10 +325,22 @@ func _on_player_level_up(_level: int) -> void:
 	# v1.1.0 天赋树停用：升级不再发天赋点、不弹天赋窗（框架保留待后续重做）。
 	pass
 
-func _on_player_died() -> void:
+## 统一结束本局并显示结算界面。reason 用于标题区分（游戏结束 / 本局结束）。
+func end_game(reason: String) -> void:
 	game_state = GameState.GAMEOVER
 	spawner.end_wave()
-	hud.show_game_over(elapsed)
+	get_tree().paused = false  # 主动结束需先解除暂停，结算按钮才可点
+	hud.show_result(reason, difficulty_name(difficulty_id), kills, wave_number,
+		player.level, player.gold, elapsed)
+
+## 暂停菜单「结束该局」：先关暂停面板、解除暂停，再走统一结算。
+func end_game_from_pause() -> void:
+	pause_panel.visible = false
+	get_tree().paused = false
+	end_game("本局结束")
+
+func _on_player_died() -> void:
+	end_game("游戏结束")
 
 func _on_enemy_killed(global_pos: Vector2, xp_value: int, gold_value: int) -> void:
 	kills += 1

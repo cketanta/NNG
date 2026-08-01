@@ -65,6 +65,7 @@ func _build_ui() -> void:
 func _make_stats_box() -> Control:
 	var box := PanelContainer.new()
 	box.custom_minimum_size = Vector2(170, 0)
+	box.add_theme_stylebox_override("panel", UiStyle.section(0))  # 玩家属性：蓝
 	var v := VBoxContainer.new()
 	box.add_child(v)
 	v.add_child(_make_section_title("玩家属性"))
@@ -76,6 +77,7 @@ func _make_stats_box() -> Control:
 func _make_weapons_box() -> Control:
 	var box := PanelContainer.new()
 	box.custom_minimum_size = Vector2(300, 0)
+	box.add_theme_stylebox_override("panel", UiStyle.section(1))  # 武器：绿
 	var v := VBoxContainer.new()
 	box.add_child(v)
 	v.add_child(_make_section_title("武器"))
@@ -94,6 +96,7 @@ func _make_weapons_box() -> Control:
 
 func _make_inventory_box() -> Control:
 	var box := PanelContainer.new()
+	box.add_theme_stylebox_override("panel", UiStyle.section(2))  # 道具栏：橙
 	var v := VBoxContainer.new()
 	box.add_child(v)
 	v.add_child(_make_section_title("道具栏"))
@@ -105,6 +108,7 @@ func _make_inventory_box() -> Control:
 func _make_upgrade_box() -> Control:
 	var box := PanelContainer.new()
 	box.custom_minimum_size = Vector2(230, 0)
+	box.add_theme_stylebox_override("panel", UiStyle.section(3))  # 武器升级：紫
 	var v := VBoxContainer.new()
 	box.add_child(v)
 	v.add_child(_make_section_title("武器升级"))
@@ -127,6 +131,7 @@ func _make_upgrade_box() -> Control:
 func _make_item_shop_box() -> Control:
 	var box := PanelContainer.new()
 	box.custom_minimum_size = Vector2(320, 0)
+	box.add_theme_stylebox_override("panel", UiStyle.section(2))  # 道具购买：橙
 	var v := VBoxContainer.new()
 	box.add_child(v)
 	v.add_child(_make_section_title("道具购买"))
@@ -221,17 +226,12 @@ func _unhandled_input(event: InputEvent) -> void:
 	if not visible:
 		return
 	if event.is_action_pressed("ui_cancel"):
+		# 标记已处理，阻断同一事件继续传给 main（shop 状态下 main 不弹暂停，但保持统一约定）。
+		get_viewport().set_input_as_handled()
 		_main.close_shop()
 
 func _make_title(text: String) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	return label
+	return UiStyle.big_title(text)
 
-func _make_section_title(text: String) -> Label:
-	var label := Label.new()
-	label.text = text
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.add_theme_font_size_override("font_size", 16)
-	return label
+func _make_section_title(text: String) -> Control:
+	return UiStyle.title_bar(text)
