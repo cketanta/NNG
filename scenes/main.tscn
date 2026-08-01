@@ -1,0 +1,223 @@
+[gd_scene format=3 uid="uid://cuxb6fxkbxi5k"]
+
+[ext_resource type="Script" uid="uid://c01k4aclaucch" path="res://scripts/main.gd" id="1_main"]
+[ext_resource type="Script" uid="uid://wfm0pa3y255" path="res://scripts/spawner.gd" id="2_spawner"]
+[ext_resource type="Script" uid="uid://clqt3qgryvxy7" path="res://scripts/hud.gd" id="3_hud"]
+[ext_resource type="PackedScene" path="res://scenes/player.tscn" id="4_player"]
+[ext_resource type="Script" uid="uid://clih77exu14jw" path="res://scripts/ui/shop_panel.gd" id="5_shop"]
+[ext_resource type="Script" uid="uid://dqot34vk3uyno" path="res://scripts/ui/talent_panel.gd" id="6_talent"]
+[ext_resource type="Script" uid="uid://b7qujf25fy0la" path="res://scripts/ui/backpack_panel.gd" id="7_backpack"]
+[ext_resource type="Theme" uid="uid://bnelm40j7jpi0" path="res://themes/cjk_theme.tres" id="8_theme"]
+[ext_resource type="Script" uid="uid://dvajhqus8ettj" path="res://scripts/ui/start_panel.gd" id="9_start"]
+[ext_resource type="Script" uid="uid://jyhto8uafimi" path="res://scripts/ui/difficulty_panel.gd" id="10_difficulty"]
+[ext_resource type="Script" uid="uid://dl4pnjklfeomm" path="res://scripts/ui/pause_panel.gd" id="11_pause"]
+
+[sub_resource type="SystemFont" id="SystemFont_cjk"]
+font_names = PackedStringArray("Microsoft YaHei", "Segoe UI", "Arial")
+
+[node name="Main" type="Node2D" unique_id=1650633779]
+script = ExtResource("1_main")
+
+[node name="Player" parent="." unique_id=444525811 instance=ExtResource("4_player")]
+
+[node name="Spawner" type="Node2D" parent="." unique_id=632061215]
+script = ExtResource("2_spawner")
+
+[node name="HUD" type="CanvasLayer" parent="." unique_id=1106049600]
+script = ExtResource("3_hud")
+
+[node name="HPBar" type="ProgressBar" parent="HUD" unique_id=1638148379]
+offset_left = 16.0
+offset_top = 16.0
+offset_right = 296.0
+offset_bottom = 40.0
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+value = 100.0
+
+[node name="KillsLabel" type="Label" parent="HUD" unique_id=1896296387]
+offset_left = 16.0
+offset_top = 48.0
+offset_right = 336.0
+offset_bottom = 72.0
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+text = "击杀: 0"
+
+[node name="TimeLabel" type="Label" parent="HUD" unique_id=2109387028]
+offset_left = 16.0
+offset_top = 76.0
+offset_right = 336.0
+offset_bottom = 100.0
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+text = "时间: 00:00"
+
+[node name="WaveLabel" type="Label" parent="HUD" unique_id=43009112]
+offset_left = 16.0
+offset_top = 104.0
+offset_right = 336.0
+offset_bottom = 128.0
+theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+text = "第 1 波"
+
+[node name="XPBar" type="ProgressBar" parent="HUD" unique_id=989209482]
+offset_left = 16.0
+offset_top = 132.0
+offset_right = 296.0
+offset_bottom = 156.0
+max_value = 5.0
+show_percentage = false
+
+[node name="XPLabel" type="Label" parent="HUD" unique_id=1171006439]
+offset_left = 16.0
+offset_top = 132.0
+offset_right = 296.0
+offset_bottom = 156.0
+theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+text = "经验 0/5"
+horizontal_alignment = 1
+
+[node name="GoldLabel" type="Label" parent="HUD" unique_id=808720268]
+offset_left = 16.0
+offset_top = 160.0
+offset_right = 336.0
+offset_bottom = 184.0
+theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+text = "金币: 0"
+
+[node name="ModeLabel" type="Label" parent="HUD" unique_id=1278049489]
+offset_left = 16.0
+offset_top = 188.0
+offset_right = 336.0
+offset_bottom = 212.0
+theme_override_colors/font_color = Color(0.6, 0.9, 0.6, 1)
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+text = "模式: 自动 (Tab)"
+
+[node name="KeyHintsLabel" type="Label" parent="HUD" unique_id=156630009]
+anchors_preset = 1
+anchor_left = 1.0
+anchor_right = 1.0
+offset_left = -360.0
+offset_top = 16.0
+offset_right = -16.0
+offset_bottom = 40.0
+grow_horizontal = 0
+theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+text = "WASD 移动 | Tab 模式 | B 背包 | Esc 菜单"
+horizontal_alignment = 2
+
+[node name="GameOverPanel" type="ColorRect" parent="HUD" unique_id=1323484143]
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.65)
+
+[node name="CenterBox" type="VBoxContainer" parent="HUD/GameOverPanel" unique_id=884963551]
+layout_mode = 0
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+alignment = 1
+
+[node name="GameOverTitle" type="Label" parent="HUD/GameOverPanel/CenterBox" unique_id=145827890]
+layout_mode = 2
+theme_override_colors/font_color = Color(1, 0.4, 0.3, 1)
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 44
+text = "游戏结束"
+horizontal_alignment = 1
+
+[node name="GameOverTime" type="Label" parent="HUD/GameOverPanel/CenterBox" unique_id=1848490526]
+layout_mode = 2
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 22
+text = "存活时间 00:00"
+horizontal_alignment = 1
+
+[node name="RestartButton" type="Button" parent="HUD/GameOverPanel/CenterBox" unique_id=1339673870]
+custom_minimum_size = Vector2(200, 0)
+layout_mode = 2
+size_flags_horizontal = 4
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 22
+text = "重新开始"
+
+[node name="ShopPanel" type="CenterContainer" parent="HUD" unique_id=670967308]
+process_mode = 3
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("8_theme")
+script = ExtResource("5_shop")
+
+[node name="TalentPanel" type="CenterContainer" parent="HUD" unique_id=2077955555]
+process_mode = 3
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("8_theme")
+script = ExtResource("6_talent")
+
+[node name="BackpackPanel" type="CenterContainer" parent="HUD" unique_id=1512940811]
+process_mode = 3
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("8_theme")
+script = ExtResource("7_backpack")
+
+[node name="StartPanel" type="CenterContainer" parent="HUD" unique_id=1617320946]
+process_mode = 3
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("8_theme")
+script = ExtResource("9_start")
+
+[node name="DifficultyPanel" type="CenterContainer" parent="HUD" unique_id=551972408]
+process_mode = 3
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("8_theme")
+script = ExtResource("10_difficulty")
+
+[node name="PausePanel" type="CenterContainer" parent="HUD" unique_id=1206743379]
+process_mode = 3
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("8_theme")
+script = ExtResource("11_pause")
+
+[connection signal="pressed" from="HUD/GameOverPanel/CenterBox/RestartButton" to="HUD" method="_on_restart_button_pressed"]

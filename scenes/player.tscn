@@ -1,0 +1,45 @@
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
+[ext_resource type="Script" path="res://scripts/weapons/weapon_manager.gd" id="2_weapon_manager"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/whip.tscn" id="3_whip"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/staff.tscn" id="4_staff"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/splitter.tscn" id="5_splitter"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/black_hole_gun.tscn" id="6_black_hole_gun"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_body"]
+radius = 14.0
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_hurtbox"]
+radius = 20.0
+
+[node name="Player" type="CharacterBody2D"]
+collision_layer = 2
+collision_mask = 0
+script = ExtResource("1_player")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_body")
+
+[node name="Hurtbox" type="Area2D" parent="."]
+collision_layer = 2
+collision_mask = 20
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Hurtbox"]
+shape = SubResource("CircleShape2D_hurtbox")
+
+[node name="WeaponManager" type="Node2D" parent="."]
+script = ExtResource("2_weapon_manager")
+
+[node name="Whip" parent="WeaponManager" instance=ExtResource("3_whip")]
+
+[node name="Staff" parent="WeaponManager" instance=ExtResource("4_staff")]
+
+[node name="Splitter" parent="WeaponManager" instance=ExtResource("5_splitter")]
+
+[node name="BlackHoleGun" parent="WeaponManager" instance=ExtResource("6_black_hole_gun")]
+
+[node name="Camera2D" type="Camera2D" parent="."]
+current = true
+position_smoothing_enabled = true
+position_smoothing_speed = 8.0

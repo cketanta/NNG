@@ -1,0 +1,59 @@
+extends Node2D
+## 黑洞枪：发射子弹，命中敌人后在命中点产生黑洞，吸附子弹与怪物。
+
+const PROJECTILE_SCENE := preload("res://scenes/weapons/projectile.tscn")
+
+var weapon_id := "black_hole_gun"
+
+@export var base_cooldown: float = 2.2
+@export var damage: int = 1
+@export var base_projectile_speed: float = 380.0
+@export var base_radius: float = 130.0       # 1 级时的黑洞半径
+@export var radius_per_level: float = 20.0   # 每级半径成长
+
+var level := 1
+var attack_speed_mult := 1.0
+var attack_range_mult := 1.0
+var damage_mult := 1.0
+
+var _aim_dir := Vector2.RIGHT
+var _firing := true
+var _timer := 0.0
+
+func set_aim_direction(dir: Vector2) -> void:
+	_aim_dir = dir.normalized()
+
+func set_firing(value: bool) -> void:
+	_firing = value
+
+func set_level(value: int) -> void:
+	level = maxi(0, value)
+
+func set_stats(attack_speed: float, attack_range: float, dmg_mult: float) -> void:
+	attack_speed_mult = attack_speed
+	attack_range_mult = attack_range
+	damage_mult = dmg_mult
+
+func _process(delta: float) -> void:
+	if level < 1:
+		return
+	_timer += delta
+	var cd := base_cooldown / maxf(attack_speed_mult, 0.1)
+	if _firing and _aim_dir != Vector2.ZERO and _timer >= cd:
+		_timer = 0.0
+		fire()
+
+## 某等级下的黑洞半径（UI 用它显示实时数值）。
+func black_hole_radius_for_level(lv: int) -> float:
+	return base_radius + radius_per_level * maxi(0, lv - 1)
+
+func current_black_hole_radius() -> float:
+	return black_hole_radius_for_level(level)
+
+func fire() -> void:
+	var projectile := PROJECTILE_SCENE.instantiate()
+	projectile.setup(_aim_dir, base_projectile_speed, int(round(damage * damage_mult)), true)
+	projectile.set_range_mult(attack_range_mult)
+	projectile.set_spawn_black_hole(current_black_hole_radius())
+	projectile.global_position = global_position + _aim_dir * 20.0
+	get_tree().current_scene.add_child(projectile)
