@@ -42,6 +42,10 @@ func _process(_delta: float) -> bool:
 			print("[OK] bought all four weapons (bhg twice)")
 		else:
 			_failures.append("buy failed: %s/%s/%s/%s/%s" % [ok1, ok2, ok3, ok4, ok5])
+		if _main.buy_item("shoes"):
+			print("[OK] bought item (shoes)")
+		else:
+			_failures.append("buy item failed")
 	elif _frames == 7:
 		# 商店效果文案必须立即反映新等级（修复显示滞后 bug）。
 		var shop := _main.get_node("HUD/ShopPanel") as ShopPanel
@@ -50,6 +54,16 @@ func _process(_delta: float) -> bool:
 			print("[OK] shop shows fresh black hole radius: %s" % bhg_effect)
 		else:
 			_failures.append("shop effect stale (bhg): '%s'" % bhg_effect)
+		var row_count := 0
+		var has_rarity := false
+		for item_id in shop._shop_item_rows:
+			row_count += 1
+			if shop._shop_item_rows[item_id]["name"].text.begins_with("["):
+				has_rarity = true
+		if row_count == 5 and has_rarity:
+			print("[OK] shop offers 5 items with rarity label")
+		else:
+			_failures.append("shop item rows=%d has_rarity=%s" % [row_count, has_rarity])
 		_main.close_shop()
 	elif _frames == 10:
 		# 关店后游戏恢复，武器管理器已同步等级。
@@ -59,10 +73,14 @@ func _process(_delta: float) -> bool:
 			print("[OK] weapon levels stacked correctly")
 		else:
 			_failures.append("weapon levels wrong: %s" % levels)
-		if _player.get("gold") == 100 - 8 - 6 - 10 - 12 - 12:
-			print("[OK] gold deducted correctly (52)")
+		if _player.get("gold") == 100 - 8 - 6 - 10 - 12 - 12 - 6:
+			print("[OK] gold deducted correctly (46, incl. shoes)")
 		else:
 			_failures.append("gold not deducted (gold=%d)" % _player.get("gold"))
+		if _player.get("item_counts").get("shoes", 0) == 1:
+			print("[OK] item count tracked: shoes x1")
+		else:
+			_failures.append("shoes count=%d" % _player.get("item_counts").get("shoes", 0))
 		if _whip.get("level") == 2:
 			print("[OK] whip node synced to level 2")
 		else:

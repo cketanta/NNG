@@ -26,6 +26,7 @@ func _process(_delta: float) -> bool:
 		_setup_splitter()
 	elif _frames == 2:
 		_check_weapon_level_effects()
+		_check_staff_arc_cap()
 	elif _frames == 60:
 		_check_splitter()
 		_setup_black_holes()
@@ -59,6 +60,39 @@ func _check_weapon_level_effects() -> void:
 		_failures.append("radius growth wrong at level 20: %f" % lv20_radius)
 	splitter.free()
 	bhg.free()
+
+func _check_staff_arc_cap() -> void:
+	var staff := preload("res://scenes/weapons/staff.tscn").instantiate()
+	# 早期（未满一圈）：相邻角保持 12°
+	if absf(staff.arc_step_degrees(8) - 12.0) < 0.001:
+		print("[OK] staff step=12° under one ring (count=8)")
+	else:
+		_failures.append("staff early step wrong: %f" % staff.arc_step_degrees(8))
+	# 满一圈（31 弹）：进入封顶，步进 < 12°，方向不重叠
+	var step31: float = staff.arc_step_degrees(31)
+	if step31 < 12.0 and absf(step31 - 360.0 / 31.0) < 0.001:
+		print("[OK] staff arc capped at 360° (count=31 step=%.2f°)" % step31)
+	else:
+		_failures.append("staff ring step wrong: %f" % step31)
+	# 超过一圈：封顶 360° 内均匀分布，方向唯一不重叠
+	var step60: float = staff.arc_step_degrees(60)
+	if step60 < 12.0 and absf(step60 - 360.0 / 60.0) < 0.001:
+		print("[OK] staff arc capped (count=60 step=%.2f°)" % step60)
+	else:
+		_failures.append("staff cap wrong: %f" % step60)
+	var dirs := {}
+	var overlap := false
+	for i in range(60):
+		var offset := (i - 59.0 / 2.0) * deg_to_rad(step60)
+		var angle := fposmod(rad_to_deg(offset), 360.0)
+		if dirs.has(angle):
+			overlap = true
+		dirs[angle] = true
+	if not overlap:
+		print("[OK] staff 60 bullets have 60 distinct directions")
+	else:
+		_failures.append("staff directions overlap at count=60")
+	staff.free()
 
 func _setup_splitter() -> void:
 	_split_enemy = MELEE_SCENE.instantiate()

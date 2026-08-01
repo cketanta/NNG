@@ -46,7 +46,9 @@ func _process(_delta: float) -> void:
 			firing = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
 		weapon.set_firing(firing)
 		weapon.set_level(player.weapon_levels.get(weapon.weapon_id, 1))
-		weapon.set_stats(player.attack_speed_mult, player.attack_range_mult, player.damage_mult)
+		# 按道具加成计算武器最终属性并下发：攻击力 / 冷却 / 弹速 / 攻击距离。
+		var stats: Dictionary = ItemDefs.weapon_final_stats(weapon, player.item_counts)
+		weapon.set_stats(stats.damage, stats.cooldown, stats.speed, stats.range)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_attack_mode"):

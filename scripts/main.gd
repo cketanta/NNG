@@ -4,12 +4,14 @@ extends Node2D
 
 const XP_GEM_SCENE := preload("res://scenes/items/xp_gem.tscn")
 const COIN_SCENE := preload("res://scenes/items/coin.tscn")
+const HEART_SCENE := preload("res://scenes/items/heart.tscn")
 
 enum GameState { START, COMBAT, SHOP, GAMEOVER }
 
 const WEAPON_IDS := ["whip", "staff", "splitter", "black_hole_gun"]
 const WEAPON_BASE_COST := { "whip": 8, "staff": 6, "splitter": 10, "black_hole_gun": 12 }
 const WEAPON_NAMES := { "whip": "鞭子", "staff": "法杖", "splitter": "分裂者", "black_hole_gun": "黑洞枪" }
+const WEAPON_NODE_NAMES := { "whip": "Whip", "staff": "Staff", "splitter": "Splitter", "black_hole_gun": "BlackHoleGun" }
 
 const DIFFICULTY_IDS := ["easy", "normal", "hard"]
 const DIFFICULTIES := {
@@ -29,6 +31,11 @@ var game_state := GameState.START
 var talent_tree: TalentTree
 var difficulty_id := "normal"
 var difficulty: Dictionary = DIFFICULTIES["normal"]
+
+# --- 商店道具（每波随机 5 个） ---
+var shop_item_offerings: Array[String] = []
+var purchased_unique: Array[String] = []  # 已购买的唯一道具（不再刷出）
+var bought_items_this_wave: Dictionary = {}  # 本波已购买的道具（每波重置，每道具本波仅可购一次）
 
 @onready var player: CharacterBody2D = $Player
 @onready var spawner: Node2D = $Spawner
@@ -158,8 +165,41 @@ func open_shop() -> void:
 	game_state = GameState.SHOP
 	if auto_pause_menus:
 		get_tree().paused = true
+	refresh_shop_items()
 	shop_panel.visible = true
 	shop_panel.refresh()
+
+## 每波随机挑 5 个不重复道具；已购买的唯一道具不再进入候选池。
+## 新的一波：重置「本波已购买」记录（道具每波仅可购一次）。
+func refresh_shop_items() -> void:
+	bought_items_this_wave.clear()
+	var pool: Array[String] = []
+	for item_id in ItemDefs.all_ids():
+		if ItemDefs.is_unique(item_id) and item_id in purchased_unique:
+			continue
+		pool.append(item_id)
+	pool.shuffle()
+	shop_item_offerings = pool.slice(0, 5)
+
+## 购买道具：校验金币与唯一性 -> 扣款 -> 玩家侧生效 -> 唯一道具记入已购。
+func buy_item(item_id: String) -> bool:
+	var cost := ItemDefs.cost(item_id)
+	if player.gold < cost:
+		return false
+	if bought_items_this_wave.get(item_id, false):
+		return false  # 本波该道具已购，不可再购
+	if ItemDefs.is_unique(item_id) and item_id in purchased_unique:
+		return false
+	player.gold -= cost
+	player.gold_changed.emit(player.gold)
+	player.buy_item(item_id)
+	bought_items_this_wave[item_id] = true  # 本波该道具已购，不可再购
+	if ItemDefs.is_unique(item_id):
+		purchased_unique.append(item_id)
+		if item_id == "ring":
+			spawner.set_spawn_rate_mult(2.0)  # 咒戒：刷怪效率 ×2
+	shop_panel.refresh()
+	return true
 
 func close_shop() -> void:
 	shop_panel.visible = false
@@ -200,6 +240,23 @@ func weapon_effect_text(weapon_id: String, level: int) -> String:
 
 func _weapon_node(node_name: String) -> Node2D:
 	return player.get_node("WeaponManager/" + node_name)
+
+## 人物属性摘要（移速/防御/血量/幸运），商店与背包共用。
+func player_stats_text() -> String:
+	return "移速 %d\n防御 %d\n血量 %d/%d\n幸运 %d" % [
+		int(player.speed + player.move_speed_bonus),
+		player.defense,
+		player.hp, player.max_hp,
+		player.luck,
+	]
+
+## 某武器的属性摘要（含当前道具加成），商店与背包共用。
+func weapon_attr_text(weapon_id: String) -> String:
+	var node := _weapon_node(WEAPON_NODE_NAMES.get(weapon_id, weapon_id))
+	var stats: Dictionary = ItemDefs.weapon_final_stats(node, player.item_counts)
+	if node.is_melee:
+		return "攻击 %d    冷却 %.1fs    距离 %d" % [stats.damage, stats.cooldown, int(stats.range)]
+	return "攻击 %d    冷却 %.1fs    弹速 %d" % [stats.damage, stats.cooldown, int(stats.speed)]
 
 # --- 天赋 ---
 
@@ -260,10 +317,8 @@ func _on_player_gold_changed(total: int) -> void:
 		shop_panel.refresh()
 
 func _on_player_level_up(_level: int) -> void:
-	talent_tree.points += 1
-	# 天赋全点满后升级不再弹天赋窗（没有可点的了）。
-	if not talent_tree.is_fully_unlocked():
-		open_talent()
+	# v1.1.0 天赋树停用：升级不再发天赋点、不弹天赋窗（框架保留待后续重做）。
+	pass
 
 func _on_player_died() -> void:
 	game_state = GameState.GAMEOVER
@@ -275,6 +330,10 @@ func _on_enemy_killed(global_pos: Vector2, xp_value: int, gold_value: int) -> vo
 	hud.update_kills(kills)
 	spawn_xp_gem(global_pos, xp_value)
 	spawn_coin(global_pos, gold_value)
+	# 红心掉率随幸运值提升：基础 5%，每点幸运 +5%。
+	var heart_chance: float = 0.05 + 0.05 * player.luck
+	if randf() < heart_chance:
+		spawn_heart(global_pos)
 
 func spawn_xp_gem(global_pos: Vector2, xp_value: int) -> void:
 	var gem := XP_GEM_SCENE.instantiate()
@@ -295,6 +354,16 @@ func spawn_coin(global_pos: Vector2, gold_value: int) -> void:
 
 func _on_coin_collected(value: int) -> void:
 	player.gain_gold(value)
+
+func spawn_heart(global_pos: Vector2) -> void:
+	var heart := HEART_SCENE.instantiate()
+	heart.value = 1
+	add_child(heart)
+	heart.global_position = global_pos
+	heart.collected.connect(_on_heart_collected)
+
+func _on_heart_collected(value: int) -> void:
+	player.heal(value)
 
 func _on_attack_mode_changed(mode: int) -> void:
 	hud.set_attack_mode(mode)

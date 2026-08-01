@@ -8,18 +8,23 @@ const TEXTURE := preload("res://assets/weapons/whip.svg")  # 武器本体贴图
 
 var weapon_id := "whip"
 
+@export var base_damage: int = 1
 @export var base_cooldown: float = 0.7
+@export var base_projectile_speed: float = 0.0  # 近战无弹速
 @export var base_range: float = 70.0
 @export var arc_degrees: float = 100.0
-@export var damage: int = 1
 @export var swing_lifetime: float = 0.1
 @export var fan_degrees: float = 40.0
 @export var combo_step_time: float = 0.06
 
+var is_melee := true
+
 var level := 1
-var attack_speed_mult := 1.0
-var attack_range_mult := 1.0
-var damage_mult := 1.0
+# 由 WeaponManager 每帧传入的最终属性（含道具加成）。
+var damage := base_damage
+var cooldown := base_cooldown
+var projectile_speed := base_projectile_speed
+var melee_range := base_range
 
 var _aim_dir := Vector2.RIGHT
 var _firing := true
@@ -36,10 +41,12 @@ func set_firing(value: bool) -> void:
 func set_level(value: int) -> void:
 	level = maxi(0, value)
 
-func set_stats(attack_speed: float, attack_range: float, dmg_mult: float) -> void:
-	attack_speed_mult = attack_speed
-	attack_range_mult = attack_range
-	damage_mult = dmg_mult
+## 接收最终属性：攻击力 / 冷却 / 弹速（远程用）/ 攻击距离（近战用）。
+func set_stats(final_damage: int, final_cooldown: float, final_speed: float, final_range: float) -> void:
+	damage = final_damage
+	cooldown = final_cooldown
+	projectile_speed = final_speed
+	melee_range = final_range
 
 func _process(delta: float) -> void:
 	if level < 1:
@@ -57,8 +64,7 @@ func _process(delta: float) -> void:
 			_combo_remaining -= 1
 	else:
 		_cooldown_timer += delta
-		var cd := base_cooldown / maxf(attack_speed_mult, 0.1)
-		if _firing and _aim_dir != Vector2.ZERO and _cooldown_timer >= cd:
+		if _firing and _aim_dir != Vector2.ZERO and _cooldown_timer >= cooldown:
 			_cooldown_timer = 0.0
 			_combo_remaining = level
 
@@ -68,7 +74,7 @@ func _spawn_swing(index: int) -> void:
 	if count > 1:
 		offset = (index - (count - 1) / 2.0) * deg_to_rad(fan_degrees / float(count - 1))
 	var dir := _aim_dir.rotated(offset)
-	var swing_range := base_range * attack_range_mult
+	var swing_range := melee_range
 
 	var zone := Area2D.new()
 	zone.collision_layer = 1 << (LAYER_WEAPON - 1)
@@ -86,7 +92,7 @@ func _spawn_swing(index: int) -> void:
 	visual.color = Color(1.0, 1.0, 1.0, 0.35)
 	zone.add_child(visual)
 
-	zone.body_entered.connect(_on_zone_body_entered.bind(int(round(damage * damage_mult))))
+	zone.body_entered.connect(_on_zone_body_entered.bind(damage))
 
 	get_tree().current_scene.add_child(zone)
 	zone.global_position = global_position  # 以武器位置为扇环起点

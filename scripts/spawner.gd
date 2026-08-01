@@ -20,6 +20,7 @@ var _spawn_mult := 1.0
 var _hp_mult := 1.0
 var _attack_mult := 1.0
 var _density_mult := 1.0
+var _rate_mult := 1.0  # 刷怪效率倍率（咒戒 ×2，间隔除以该值）
 
 ## 应用难度倍率：影响刷怪间隔、每只怪的属性与刷怪密度。
 func set_difficulty(spawn_mult: float, hp_mult: float, attack_mult: float, density_mult := 1.0) -> void:
@@ -27,6 +28,10 @@ func set_difficulty(spawn_mult: float, hp_mult: float, attack_mult: float, densi
 	_hp_mult = hp_mult
 	_attack_mult = attack_mult
 	_density_mult = density_mult
+
+## 刷怪效率倍率（>1 刷得更快）；咒戒购买时设为 2.0。
+func set_spawn_rate_mult(mult: float) -> void:
+	_rate_mult = maxf(mult, 0.1)
 
 func begin_wave(wave: int) -> void:
 	_wave = wave
@@ -39,7 +44,7 @@ func end_wave() -> void:
 func _process(delta: float) -> void:
 	if not _active:
 		return
-	var interval := maxf(min_interval, base_interval * _spawn_mult * pow(interval_per_wave_decay, _wave - 1))
+	var interval := maxf(min_interval, base_interval * _spawn_mult * pow(interval_per_wave_decay, _wave - 1) / _rate_mult)
 	_timer += delta
 	if _timer >= interval:
 		_timer = 0.0

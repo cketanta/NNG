@@ -1,5 +1,6 @@
 extends SceneTree
-## 背包测试：打开背包 -> 暂停；显示金币/道具；背包内可花费攒下的天赋点；关闭 -> 恢复。
+## 背包测试（v1.1.0）：打开暂停；显示人物属性/已拥有武器/道具（×数量）；
+## 不含天赋树；关闭恢复。
 
 var _frames := 0
 var _failures: Array[String] = []
@@ -18,8 +19,7 @@ func _process(_delta: float) -> bool:
 	if _frames == 1:
 		_main.start_with_weapon("whip")
 		_player.gain_gold(50)
-		var tree = _main.get("talent_tree")
-		tree.points = 1  # simulate one banked talent point
+		_main.buy_item("shoes")  # 买一个道具用于显示
 		_main.open_backpack()
 	elif _frames == 5:
 		if paused:
@@ -32,28 +32,33 @@ func _process(_delta: float) -> bool:
 			_finish()
 			return true
 		var backpack := panel as BackpackPanel
-		if backpack._gold_label.text == "金币: 50":
-			print("[OK] backpack shows gold")
+		if backpack._gold_label.text == "金币: 44":
+			print("[OK] backpack shows gold after purchase")
 		else:
 			_failures.append("gold label '%s'" % backpack._gold_label.text)
-		if "Lv.1" in backpack._items_label.text and "段连斩" in backpack._items_label.text:
-			print("[OK] backpack lists weapons with their effects")
+		if "移速" in backpack._stats_label.text and "防御" in backpack._stats_label.text:
+			print("[OK] backpack shows player stats")
 		else:
-			_failures.append("items label '%s'" % backpack._items_label.text)
-		# 在背包内花费攒下的天赋点。
-		backpack._on_buy("attack_speed")
-	elif _frames == 10:
-		var mult: float = _player.get("attack_speed_mult")
-		if absf(mult - 1.08) < 0.001:
-			print("[OK] spent banked point from backpack, attack_speed_mult=1.08")
+			_failures.append("stats label '%s'" % backpack._stats_label.text)
+		var whip_row: Dictionary = backpack._weapon_rows["whip"]
+		if "Lv.1" in whip_row["name"].text and "段连斩" in whip_row["effect"].text:
+			print("[OK] backpack lists owned weapons")
 		else:
-			_failures.append("attack_speed_mult=%f" % mult)
+			_failures.append("weapons row '%s / %s'" % [whip_row["name"].text, whip_row["effect"].text])
+		if "跑鞋" in backpack._items_label.text and "×1" in backpack._items_label.text:
+			print("[OK] backpack lists item with count")
+		else:
+			_failures.append("item label '%s'" % backpack._items_label.text)
+		if backpack.get("_tree_ui") == null:
+			print("[OK] no talent tree in backpack")
+		else:
+			_failures.append("talent tree still in backpack")
 		_main.close_backpack()
-	elif _frames == 15:
+	elif _frames == 10:
 		if not paused and not _main.get_node("HUD/BackpackPanel").visible:
 			print("[OK] close_backpack resumes the game")
 		else:
-			_failures.append("game still paused / panel still visible after close")
+			_failures.append("game still paused / panel visible after close")
 		_finish()
 		return true
 	return false

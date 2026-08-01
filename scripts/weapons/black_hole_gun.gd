@@ -6,16 +6,21 @@ const TEXTURE := preload("res://assets/weapons/black_hole_gun.svg")  # 武器本
 
 var weapon_id := "black_hole_gun"
 
+@export var base_damage: int = 1
 @export var base_cooldown: float = 2.2
-@export var damage: int = 1
 @export var base_projectile_speed: float = 380.0
+@export var base_range: float = 0.0  # 远程用弹道寿命表达距离
 @export var base_radius: float = 130.0       # 1 级时的黑洞半径
 @export var radius_per_level: float = 20.0   # 每级半径成长
 
+var is_melee := false
+
 var level := 1
-var attack_speed_mult := 1.0
-var attack_range_mult := 1.0
-var damage_mult := 1.0
+# 由 WeaponManager 每帧传入的最终属性（含道具加成）。
+var damage := base_damage
+var cooldown := base_cooldown
+var projectile_speed := base_projectile_speed
+var melee_range := base_range
 
 var _aim_dir := Vector2.RIGHT
 var _firing := true
@@ -30,10 +35,12 @@ func set_firing(value: bool) -> void:
 func set_level(value: int) -> void:
 	level = maxi(0, value)
 
-func set_stats(attack_speed: float, attack_range: float, dmg_mult: float) -> void:
-	attack_speed_mult = attack_speed
-	attack_range_mult = attack_range
-	damage_mult = dmg_mult
+## 接收最终属性：攻击力 / 冷却 / 弹速 / 攻击距离（远程用弹速与寿命，距离暂未用）。
+func set_stats(final_damage: int, final_cooldown: float, final_speed: float, final_range: float) -> void:
+	damage = final_damage
+	cooldown = final_cooldown
+	projectile_speed = final_speed
+	melee_range = final_range
 
 func _process(delta: float) -> void:
 	if level < 1:
@@ -44,8 +51,7 @@ func _process(delta: float) -> void:
 		rotation = _aim_dir.angle()
 	queue_redraw()
 	_timer += delta
-	var cd := base_cooldown / maxf(attack_speed_mult, 0.1)
-	if _firing and _aim_dir != Vector2.ZERO and _timer >= cd:
+	if _firing and _aim_dir != Vector2.ZERO and _timer >= cooldown:
 		_timer = 0.0
 		fire()
 
@@ -58,8 +64,7 @@ func current_black_hole_radius() -> float:
 
 func fire() -> void:
 	var projectile := PROJECTILE_SCENE.instantiate()
-	projectile.setup(_aim_dir, base_projectile_speed, int(round(damage * damage_mult)), true)
-	projectile.set_range_mult(attack_range_mult)
+	projectile.setup(_aim_dir, projectile_speed, damage, true)
 	projectile.set_spawn_black_hole(current_black_hole_radius())
 	projectile.set_visual_type("black_hole_gun")
 	projectile.global_position = global_position + _aim_dir * 30.0  # 从武器枪口处发射

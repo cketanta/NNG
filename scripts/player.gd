@@ -24,11 +24,18 @@ var level := 1
 # 武器初始 0 级；开局选中的武器变为 1，其余可在商店购买。
 var weapon_levels: Dictionary = { "whip": 0, "staff": 0, "splitter": 0, "black_hole_gun": 0 }
 
-# --- 战斗属性（由天赋加成） ---
+# --- 战斗属性 ---
+# 天赋树已停用，以下倍率恒为 1.0（不再被更新），道具改用加算/乘算作用于基础值。
 var move_speed_mult := 1.0
 var attack_speed_mult := 1.0
 var attack_range_mult := 1.0
 var damage_mult := 1.0
+
+# --- 道具与人物属性（道具驱动，见 buy_item） ---
+var item_counts: Dictionary = {}   # 道具 id -> 已获得数量
+var defense := 0                   # 防御力（劣质盔甲累计，每点减 1 伤害）
+var luck := 0                      # 幸运值（幸运草累计，提高红心掉率）
+var move_speed_bonus := 0          # 移速加算（跑鞋累计，基础 240）
 
 @onready var hurtbox: Area2D = $Hurtbox
 
@@ -41,7 +48,8 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	var input_dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	velocity = input_dir * speed * move_speed_mult
+	# 移速 = 基础速度 + 跑鞋加算（天赋停用，不再乘 move_speed_mult）。
+	velocity = input_dir * (speed + move_speed_bonus)
 	move_and_slide()
 	_apply_contact_damage()
 
@@ -73,10 +81,37 @@ func apply_talent_stats(tree) -> void:
 func take_damage(amount: int) -> void:
 	if hp <= 0:
 		return
-	hp = maxi(0, hp - amount)
+	# 防御力：每点减 1 点伤害，最低受到 1 点（避免完全免伤）。
+	var reduced := maxi(1, amount - defense)
+	hp = maxi(0, hp - reduced)
 	hp_changed.emit(hp, max_hp)
 	if hp <= 0:
 		die()
+
+## 回复血量（不超出上限）。红心、绷带等道具调用。
+func heal(amount: int) -> void:
+	if hp <= 0:
+		return
+	hp = mini(max_hp, hp + amount)
+	hp_changed.emit(hp, max_hp)
+
+## 购买道具：累计计数并立即应用玩家侧效果。
+## 武器侧效果（攻击/冷却/弹速/距离）由 WeaponManager 每帧读取 item_counts 计算，不在此生效。
+func buy_item(item_id: String) -> void:
+	item_counts[item_id] = item_counts.get(item_id, 0) + 1
+	match ItemDefs.kind(item_id):
+		"move_speed":
+			move_speed_bonus += 10
+		"armor":
+			defense += 1
+		"luck":
+			luck += 1
+		"max_hp":
+			max_hp += 10
+			hp = mini(max_hp, hp + 10)  # 立即回满新增的上限部分
+			hp_changed.emit(hp, max_hp)
+		"heal":
+			heal(10)
 
 func die() -> void:
 	died.emit()
