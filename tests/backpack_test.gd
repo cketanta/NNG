@@ -1,5 +1,5 @@
 extends SceneTree
-## 背包测试：打开暂停；显示金币 / 人物属性 / 攻击方式（+已点天赋概览） / 道具；关闭恢复。
+## 背包测试：打开暂停；显示金币 / 玩家属性 / 武器（名称等级，无天赋） / 道具；关闭恢复。
 
 var _frames := 0
 var _failures: Array[String] = []
@@ -18,7 +18,7 @@ func _process(_delta: float) -> bool:
 	if _frames == 1:
 		_main.start_with_weapon("pistol")
 		_player.gain_gold(50)
-		_main.buy_item("shoes")  # 道具框架保留，背包道具区应显示
+		_main.buy_item("shoes")
 		_main.open_backpack()
 	elif _frames == 5:
 		if paused:
@@ -39,12 +39,16 @@ func _process(_delta: float) -> bool:
 			print("[OK] backpack shows player stats")
 		else:
 			_failures.append("stats label '%s'" % backpack._stats_label.text)
-		# 攻击方式区：未选攻击方式时显示当前手枪 + 提示。
-		var attack_text := _gather_text(backpack._attack_container)
-		if "破旧手枪" in attack_text and "首次升级" in attack_text:
-			print("[OK] backpack shows current attack + hint")
+		# 武器区：显示名称与等级，不含天赋。
+		var weapons_text := _gather_text(backpack._weapons_box)
+		if "破旧手枪" in weapons_text and "Lv.1" in weapons_text:
+			print("[OK] backpack lists weapon with level")
 		else:
-			_failures.append("attack area text '%s'" % attack_text)
+			_failures.append("weapons text '%s'" % weapons_text)
+		if not "天赋" in weapons_text:
+			print("[OK] backpack weapon area has no talent")
+		else:
+			_failures.append("backpack shows weapon talent")
 		# 道具区：显示已购道具 ×数量。
 		var items_text := _gather_text(backpack._items_box)
 		if "跑鞋" in items_text and "×1" in items_text:
@@ -61,7 +65,7 @@ func _process(_delta: float) -> bool:
 		return true
 	return false
 
-## 递归收集某容器内所有 Label 文本，用于断言卡片化的区内容。
+## 递归收集某容器内所有 Label 文本。
 func _gather_text(node: Node) -> String:
 	var out := ""
 	if node is Label:

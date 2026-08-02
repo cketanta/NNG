@@ -46,11 +46,18 @@ func _ready() -> void:
 func _player() -> Node2D:
 	return get_parent().get_parent() as Node2D
 
+## 人物天赋（迅捷攻速 / 狂力伤害）应用到初始手枪。
+func _apply_talents() -> void:
+	var pt: PlayerTalent = _player().player_talent
+	damage = maxi(1, int(round(base_damage * pow(1.1, pt.owned_count("damage")))))
+	cooldown = base_cooldown * pow(0.92, pt.owned_count("attack_speed"))
+
 func _process(delta: float) -> void:
 	visible = _player().visible  # 跟随玩家可见性（菜单阶段玩家隐藏时攻击也不渲染）
 	if _aim_dir != Vector2.ZERO:
 		rotation = _aim_dir.angle()
 	queue_redraw()
+	_apply_talents()  # 人物天赋倍率
 	_timer += delta
 	if _firing and _aim_dir != Vector2.ZERO and _timer >= cooldown:
 		_timer = 0.0

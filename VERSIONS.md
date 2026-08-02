@@ -14,6 +14,35 @@
 
 ---
 
+## v1.3.0
+
+**日期**：2026-08-02
+**状态**：武器商店化重构：武器改为商店售卖 + 恢复等级系统 + 武器环绕玩家（8 槽位）+ 同名合成；每武器独立天赋树（等级=点数）；人物天赋恢复 v1.0 原方案（升级发点）；商店恢复道具售卖 + 武器出售；UI 全屏化。
+
+**包含内容**：
+- 武器库存：8 个武器槽位，每把武器独立等级与天赋树；初始破旧手枪 Lv.1；**武器环绕玩家旋转**（半径 34、缓慢自转），每把独立瞄准、独立开火
+- 商店售卖武器（短刃/左轮）：有空槽 → 入槽；槽满且已有同名 → **自动合成**；槽满且无同名 → 禁止购买；武器等级恢复（购买价值 = 基础价 ×(1+0.5×(等级-1))）
+- **合成（仅商店）**：商店武器槽位点选两把同名武器 → 等级相加、保留高等级武器天赋树与已点天赋、点数 = 新等级 − 已点天赋数
+- 每武器独立天赋树：短刃/左轮两棵树数据不变，但**每把武器独立一份**（owned + points）；**武器等级 N = N 点武器天赋点**；天赋界面点选武器切换其天赋树，三选一加点
+- 人物天赋恢复 v1.0 原方案：疾跑/迅捷/延伸/狂力 4 分支线性树，**升级 +1 人物天赋点**（与经验挂钩）；人物天赋倍率作用于所有武器
+- 商店恢复道具售卖（每波 5 个随机）+ **武器出售**（售价 = 当前购买价值一半，含初始手枪；商店不卖手枪）
+- 左轮「弹匣扩容」改为**连续发射**（一次冷却内沿瞄准方向连射多枚，非齐发散射）
+- UI 全屏：背包（属性/武器[无天赋]/道具）；天赋界面（属性/人物天赋/武器天赋）；商店（槽位合成出售/武器购买/道具购买）
+
+**关键文件**（回退时对照）：
+- `scripts/systems/player_talent.gd`（新增）：人物天赋
+- `scripts/player.gd`：`weapon_slots` 槽位、`add_weapon/combine_slots/remove_slot`
+- `scripts/weapons/weapon_manager.gd`：多武器环绕 + 按槽位动态实例化
+- `scripts/attacks/pistol|blade|revolver.gd`：per-weapon 天赋树 + 左轮连射
+- `scripts/main.gd`：商店购买/合成/出售、升级发人物天赋点
+- `scripts/ui/shop_panel|talent_panel|backpack_panel.gd`（重写）、`debug_panel.gd`
+- `scenes/player.tscn`（移除固定武器节点）、`scenes/main.tscn`（移除 AttackSelectPanel）
+- `tests/`：新增 `player_talent_test`/`synthesis_test`，重写 shop/talent/backpack/start/debug/weapons/blade/revolver
+
+**导出**：`exports/v1.3.0/NNG_Ver1.3.0.exe`（单文件，`embed_pck=true`）+ `readme.txt`（操作介绍 + 各版本更新摘要）。
+
+**备注**：17 个无头测试全过。**遗留**：`attack_select_panel.gd`（v1.2.0 停用）、`talent_tree_ui.gd`/`start_panel.gd`（孤儿脚本）保留未删。
+
 ## v1.2.0
 
 **日期**：2026-08-02

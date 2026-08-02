@@ -8,6 +8,7 @@ const SPINNER_SCRIPT := preload("res://scripts/attacks/spinner.gd")
 var _texture: Texture2D  # 本体贴图（懒加载）
 
 var weapon_id := "revolver"
+var talent_tree: TalentTree  # 该武器独立天赋树（由 WeaponManager 注入）
 
 @export var base_damage: int = 4
 @export var base_cooldown: float = 0.9
@@ -33,6 +34,11 @@ var _has_spinner := false   # 转盘枪手
 # --- 转盘枪手特殊攻击状态 ---
 var _spinner_active := false
 var _spinner_ref: Node2D = null
+
+# --- 连射状态（弹匣扩容：一次冷却内连续发射多枚） ---
+var _burst_remaining := 0     # 本次连射剩余弹数
+var _burst_timer := 0.0
+const BURST_INTERVAL := 0.08  # 连续发射间隔（秒）
 
 func set_aim_direction(dir: Vector2) -> void:
 	_aim_dir = dir.normalized()
@@ -64,17 +70,29 @@ func _process(delta: float) -> void:
 	if _spinner_active:
 		return  # 转盘期间无法主动攻击
 	_timer += delta
-	if _firing and _aim_dir != Vector2.ZERO and _timer >= cooldown:
+	if _burst_remaining > 0:
+		# 连射：每隔固定间隔连续发射一枚，方向保持瞄准方向（非散射）。
+		_burst_timer += delta
+		if _burst_timer >= BURST_INTERVAL:
+			_burst_timer = 0.0
+			_fire_bullet(_aim_dir)
+			_burst_remaining -= 1
+	elif _firing and _aim_dir != Vector2.ZERO and _timer >= cooldown:
 		_timer = 0.0
-		fire()
+		_burst_remaining = _bullet_count  # 触发一次连射序列
 
 ## 当前攻击方式所属玩家节点。
 func _player() -> Node2D:
 	return get_parent().get_parent() as Node2D
 
-## 从玩家天赋树重算终值。
+## 注入本武器独立天赋树（WeaponManager 建槽位时传入）。
+func set_talent_tree(tree: TalentTree) -> void:
+	talent_tree = tree
+
+## 从本武器天赋树 + 人物天赋重算终值。
 func _apply_talents() -> void:
-	var owned_ids: Array = _player().talent_tree.owned_ids("revolver")
+	var tree: TalentTree = talent_tree if talent_tree != null else TalentTree.new()
+	var owned_ids: Array = tree.owned_ids("revolver")
 	var dmg_mult := 1.0
 	var cd_mult := 1.0
 	_bullet_count = 1
@@ -92,8 +110,10 @@ func _apply_talents() -> void:
 		_homing_deg = 0.5  # 微弱追踪
 	if "rev_homing_2" in owned_ids:
 		_homing_deg = 2.0  # 追踪增强
-	damage = maxi(1, int(round(base_damage * dmg_mult)))
-	cooldown = base_cooldown * cd_mult
+	# 人物天赋（迅捷攻速 / 狂力伤害）叠加。
+	var pt: PlayerTalent = _player().player_talent
+	damage = maxi(1, int(round(base_damage * dmg_mult * pow(1.1, pt.owned_count("damage")))))
+	cooldown = base_cooldown * cd_mult * pow(0.92, pt.owned_count("attack_speed"))
 
 func _count_owned(owned_ids: Array, prefix: String) -> int:
 	var count := 0
@@ -103,12 +123,9 @@ func _count_owned(owned_ids: Array, prefix: String) -> int:
 	return count
 
 func fire() -> void:
-	# 连射弹沿瞄准方向带轻微散布齐发。
-	for i in _bullet_count:
-		var offset := 0.0
-		if _bullet_count > 1:
-			offset = (i - (_bullet_count - 1) / 2.0) * 0.08
-		_fire_bullet(_aim_dir.rotated(offset))
+	# 触发一次连射序列（弹匣扩容决定连发弹数）。
+	_burst_remaining = _bullet_count
+	_burst_timer = 0.0
 
 func _fire_bullet(dir: Vector2) -> void:
 	var bullet := PROJECTILE_SCENE.instantiate()

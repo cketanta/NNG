@@ -6,9 +6,14 @@ extends Node2D
 const LAYER_WEAPON := 6  # 武器命中区所在的碰撞层（1 基）
 const LAYER_ENEMY := 3   # 敌人所在的碰撞层（1 基）
 const PROJECTILE_SCENE := preload("res://scenes/weapons/projectile.tscn")
+const RING_WAVE_SCRIPT := preload("res://scripts/effects/ring_wave.gd")
+const SWING_DURATION := 0.12  # 挥动动画时长（秒）
+const SWING_START_DEG := 50.0  # 挥动起始角度（相对瞄准方向）
+const SWING_END_DEG := -50.0   # 挥动结束角度
 var _texture: Texture2D  # 本体贴图（懒加载）
 
 var weapon_id := "blade"
+var talent_tree: TalentTree  # 该武器独立天赋树（由 WeaponManager 注入）
 
 @export var base_damage: int = 2
 @export var base_cooldown: float = 0.5
@@ -30,6 +35,7 @@ var _firing := true
 var _cooldown_timer := 0.0
 var _combo_remaining := 0  # 本次攻击剩余挥砍刀数
 var _combo_timer := 0.0
+var _swing_timer := 0.0  # 挥动动画剩余时间
 
 # --- 天赋状态（由 _apply_talents 每帧重算） ---
 var _combo_count := 1      # 一次攻击挥砍次数（双/三/四刀流）
@@ -59,7 +65,14 @@ func _ready() -> void:
 func _process(delta: float) -> void:
 	visible = _player().visible  # 跟随玩家可见性（菜单阶段玩家隐藏时攻击也不渲染）
 	if _aim_dir != Vector2.ZERO:
-		rotation = _aim_dir.angle()
+		var base_angle := _aim_dir.angle()
+		if _swing_timer > 0.0:
+			_swing_timer -= delta
+			# 挥动动画：从 +50° 摆到 -50°，呈现挥砍姿态。
+			var t := 1.0 - _swing_timer / SWING_DURATION
+			rotation = base_angle + deg_to_rad(lerpf(SWING_START_DEG, SWING_END_DEG, t))
+		else:
+			rotation = base_angle
 	queue_redraw()
 	_apply_talents()
 	if _combo_remaining > 0:
@@ -74,14 +87,20 @@ func _process(delta: float) -> void:
 			_cooldown_timer = 0.0
 			_launch_air_blades()  # 气刃随一次攻击同时发射
 			_combo_remaining = _combo_count
+			_swing_timer = SWING_DURATION  # 触发挥动动画
 
 ## 当前攻击方式所属玩家节点。
 func _player() -> Node2D:
 	return get_parent().get_parent() as Node2D
 
-## 从玩家天赋树重算终值（每帧调用，量小可接受）。
+## 注入本武器独立天赋树（WeaponManager 建槽位时传入）。
+func set_talent_tree(tree: TalentTree) -> void:
+	talent_tree = tree
+
+## 从本武器天赋树 + 人物天赋重算终值（每帧调用，量小可接受）。
 func _apply_talents() -> void:
-	var owned_ids: Array = _player().talent_tree.owned_ids("blade")
+	var tree: TalentTree = talent_tree if talent_tree != null else TalentTree.new()
+	var owned_ids: Array = tree.owned_ids("blade")
 	var range_mult := 1.0
 	var dmg_mult := 1.0
 	var cd_mult := 1.0
@@ -125,9 +144,11 @@ func _apply_talents() -> void:
 		_bleed_max = 30
 	if "blade_grief" in owned_ids:
 		_bleed_max = 50
-	damage = maxi(1, int(round(base_damage * dmg_mult)))
-	cooldown = base_cooldown * cd_mult
-	melee_range = base_range * range_mult
+	# 人物天赋（迅捷攻速 / 延伸范围 / 狂力伤害）叠加。
+	var pt: PlayerTalent = _player().player_talent
+	damage = maxi(1, int(round(base_damage * dmg_mult * pow(1.1, pt.owned_count("damage")))))
+	cooldown = base_cooldown * cd_mult * pow(0.92, pt.owned_count("attack_speed"))
+	melee_range = base_range * range_mult * pow(1.12, pt.owned_count("attack_range"))
 
 ## 统计已拥有天赋中 id 以 prefix 开头（且是 1~N 编号）的数量。
 func _count_owned(owned_ids: Array, prefix: String) -> int:
@@ -149,9 +170,14 @@ func _launch_air_blades() -> void:
 				offset = (i - (_air_blade_count - 1) / 2.0) * deg_to_rad(arc_degrees / float(_air_blade_count))
 			_fire_air_blade(_aim_dir.rotated(offset), air_dmg)
 	if _grand_slash:
-		var grand_dmg := damage * 2  # 环形气刃波：二倍挥砍伤害
-		for i in range(16):
-			_fire_air_blade(Vector2.from_angle(TAU * float(i) / 16.0), grand_dmg)
+		_spawn_ring_wave(damage * 2)  # 环形气刃波：二倍挥砍伤害
+
+## 气刃大回旋：生成一个从玩家中心扩散的白色环形震荡波。
+func _spawn_ring_wave(dmg: int) -> void:
+	var wave := RING_WAVE_SCRIPT.new()
+	wave.setup(dmg, 350.0, 420.0)
+	get_tree().current_scene.add_child(wave)
+	wave.global_position = global_position  # 从玩家中心扩散
 
 func _fire_air_blade(dir: Vector2, dmg: int) -> void:
 	var blade := PROJECTILE_SCENE.instantiate()

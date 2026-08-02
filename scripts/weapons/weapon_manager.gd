@@ -1,7 +1,7 @@
 extends Node2D
-## 选择瞄准目标（AUTO：最近敌人；MANUAL：鼠标）并驱动当前激活的攻击方式。
-## 攻击方式节点挂在玩家中心（position=0），发射中心即玩家自身（不再环绕旋转）。
-## 多武器环绕旋转框架保留（本文件重写为单攻击控制，原环绕逻辑移除但其它脚本未删）。
+## 多武器管理器：按玩家武器槽位动态实例化武器节点，环绕玩家缓慢旋转。
+## 每把武器独立瞄准（从自身位置指向目标），AUTO/MANUAL 切换、halt 停火。
+## 武器终值由攻击节点自身每帧按「本武器天赋树 + 人物天赋」重算。
 
 enum AttackMode { AUTO, MANUAL }
 
@@ -9,29 +9,43 @@ signal attack_mode_changed(mode: int)
 
 @export var attack_mode: AttackMode = AttackMode.AUTO
 
-var active_attack_id := "pistol"  # 当前激活的攻击方式 id
+const RING_RADIUS := 34.0  # 武器环绕玩家的半径
+const ROTATE_SPEED := 0.5  # 武器环自转角速度（rad/s）
+const WEAPON_SCENES := {
+	"pistol": preload("res://scenes/weapons/pistol.tscn"),
+	"blade": preload("res://scenes/weapons/blade.tscn"),
+	"revolver": preload("res://scenes/weapons/revolver.tscn"),
+}
 
-var _attacks: Array[Node2D] = []
+var _weapons: Array[Node2D] = []
+var _ring_angle := 0.0
 
-func _ready() -> void:
-	for child in get_children():
-		if child.has_method("set_aim_direction") and child.has_method("set_firing"):
-			_attacks.append(child as Node2D)
-	set_active_attack(active_attack_id)
-
-## 切换当前激活的攻击方式（首次升级选短刃/左轮时调用）。
-func set_active_attack(id: String) -> void:
-	active_attack_id = id
-	for attack in _attacks:
-		var is_active: bool = attack.weapon_id == id
-		attack.set_process(is_active)
-		if not is_active:
-			attack.visible = false  # 非激活隐藏；激活的可见性由攻击节点每帧跟随玩家控制
+## 按玩家武器槽位重建武器节点（购买/合成/出售后调用）。
+func rebuild(slots: Array) -> void:
+	for w in _weapons:
+		if is_instance_valid(w):
+			w.free()  # 立即释放，避免 queue_free 延迟造成新旧节点混合
+	_weapons.clear()
+	for i in range(slots.size()):
+		var slot: Dictionary = slots[i]
+		if not WEAPON_SCENES.has(slot.id):
+			continue
+		var inst: Node2D = WEAPON_SCENES[slot.id].instantiate()
+		if inst.has_method("set_talent_tree"):
+			inst.set_talent_tree(slot.tree)
+		if inst.has_method("set_level"):
+			inst.set_level(slot.level)
+		add_child(inst)
+		_weapons.append(inst)
 
 func _process(_delta: float) -> void:
 	var player := get_parent() as CharacterBody2D
 	if not is_instance_valid(player):
 		return
+	# 武器均匀分布在玩家周围的圆周上，缓慢自转。
+	_ring_angle += _delta * ROTATE_SPEED
+	for i in range(_weapons.size()):
+		_weapons[i].position = Vector2.from_angle(_ring_angle + TAU * float(i) / float(_weapons.size())) * RING_RADIUS
 
 	var target_pos: Vector2
 	if attack_mode == AttackMode.AUTO:
@@ -39,20 +53,17 @@ func _process(_delta: float) -> void:
 	else:
 		target_pos = get_global_mouse_position()
 
-	for attack in _attacks:
-		if attack.weapon_id != active_attack_id:
-			continue
-		# 发射中心 = 玩家自身：从玩家位置指向目标。
-		var to_target := target_pos - player.global_position
+	for weapon in _weapons:
+		# 每把武器独立瞄准：从武器自身位置指向目标，避免各武器子弹平行。
+		var to_target := target_pos - weapon.global_position
 		var wdir := Vector2.ZERO
 		if to_target.is_finite() and to_target.length_squared() > 0.0001:
 			wdir = to_target.normalized()
-		attack.set_aim_direction(wdir)
+		weapon.set_aim_direction(wdir)
 		var firing := wdir != Vector2.ZERO
 		if attack_mode == AttackMode.MANUAL:
 			firing = Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT)
-		attack.set_firing(firing)
-		# 攻击方式终值由其自身每帧按玩家天赋树重算（见各攻击方式 _apply_talents）。
+		weapon.set_firing(firing)
 
 func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_attack_mode"):
@@ -63,10 +74,10 @@ func toggle_mode() -> void:
 	attack_mode = AttackMode.MANUAL if attack_mode == AttackMode.AUTO else AttackMode.AUTO
 	attack_mode_changed.emit(attack_mode)
 
-## 停止整条攻击链：停掉 WeaponManager 与所有攻击方式节点。
+## 停止整条武器链：停掉 WeaponManager 与所有武器节点。
 func halt() -> void:
-	for attack in _attacks:
-		attack.set_process(false)
+	for weapon in _weapons:
+		weapon.set_process(false)
 	set_process(false)
 
 func _nearest_enemy_pos(player: Node2D) -> Vector2:

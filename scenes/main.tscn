@@ -8,7 +8,6 @@
 [ext_resource type="Script" uid="uid://dqot34vk3uyno" path="res://scripts/ui/talent_panel.gd" id="6_talent"]
 [ext_resource type="Script" uid="uid://b7qujf25fy0la" path="res://scripts/ui/backpack_panel.gd" id="7_backpack"]
 [ext_resource type="Theme" uid="uid://bnelm40j7jpi0" path="res://themes/cjk_theme.tres" id="8_theme"]
-[ext_resource type="Script" path="res://scripts/ui/attack_select_panel.gd" id="13_attack_select"]
 [ext_resource type="Script" uid="uid://jyhto8uafimi" path="res://scripts/ui/difficulty_panel.gd" id="10_difficulty"]
 [ext_resource type="Script" uid="uid://dl4pnjklfeomm" path="res://scripts/ui/pause_panel.gd" id="11_pause"]
 [ext_resource type="Script" uid="uid://inbv73ogdq2p" path="res://scripts/ui/debug_panel.gd" id="12_debug"]
@@ -233,7 +232,7 @@ grow_vertical = 2
 theme = ExtResource("8_theme")
 script = ExtResource("5_shop")
 
-[node name="TalentPanel" type="CenterContainer" parent="HUD" unique_id=2077955555]
+[node name="TalentPanel" type="Control" parent="HUD" unique_id=2077955555]
 process_mode = 3
 visible = false
 anchors_preset = 15
@@ -244,7 +243,7 @@ grow_vertical = 2
 theme = ExtResource("8_theme")
 script = ExtResource("6_talent")
 
-[node name="BackpackPanel" type="CenterContainer" parent="HUD" unique_id=1512940811]
+[node name="BackpackPanel" type="Control" parent="HUD" unique_id=1512940811]
 process_mode = 3
 visible = false
 anchors_preset = 15
@@ -254,17 +253,6 @@ grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("8_theme")
 script = ExtResource("7_backpack")
-
-[node name="AttackSelectPanel" type="CenterContainer" parent="HUD"]
-process_mode = 3
-visible = false
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-theme = ExtResource("8_theme")
-script = ExtResource("13_attack_select")
 
 [node name="DifficultyPanel" type="CenterContainer" parent="HUD" unique_id=551972408]
 process_mode = 3

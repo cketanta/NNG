@@ -89,6 +89,7 @@ func apply_pull(center: Node2D, speed: float) -> void:
 	_pull_speed = speed
 
 func _physics_process(delta: float) -> void:
+	rotation = _direction.angle()  # 贴图朝向飞行方向（月牙气刃尖端朝前）
 	if _homing_deg > 0.0 and _friendly:
 		_apply_homing(delta)
 	global_position += _direction * _speed * delta
@@ -130,7 +131,7 @@ func _draw() -> void:
 			size = 14.0
 		"blade_air":
 			tex = TEX_BLADE_AIR
-			size = 22.0
+			size = 34.0
 		_:
 			_draw_fallback_ball()
 			return

@@ -55,13 +55,23 @@ func _build_ui() -> void:
 		_attr_spins[kind] = spin
 		vbox.add_child(_make_adjust_row(spec["label"], spin, _apply_attr.bind(kind, spin)))
 
-	# --- 攻击方式切换 ---
-	vbox.add_child(UiStyle.title_bar("攻击方式（测试切换）"))
-	for attack_id in _main.attack_ids():
-		var attack_btn := Button.new()
-		attack_btn.text = "切换为 " + _main.attack_name(attack_id)
-		attack_btn.pressed.connect(_apply_attack.bind(attack_id))
-		vbox.add_child(attack_btn)
+	# --- 武器调试（测试加减） ---
+	vbox.add_child(UiStyle.title_bar("武器（测试加减）"))
+	for weapon_id in ["pistol", "blade", "revolver"]:
+		var weapon_row := HBoxContainer.new()
+		var name_label := Label.new()
+		name_label.text = _main.weapon_name(weapon_id)
+		name_label.custom_minimum_size = Vector2(100, 0)
+		weapon_row.add_child(name_label)
+		var add_btn := Button.new()
+		add_btn.text = "+1"
+		add_btn.pressed.connect(_give_weapon.bind(weapon_id))
+		weapon_row.add_child(add_btn)
+		var remove_btn := Button.new()
+		remove_btn.text = "-1"
+		remove_btn.pressed.connect(_remove_weapon.bind(weapon_id))
+		weapon_row.add_child(remove_btn)
+		vbox.add_child(weapon_row)
 
 	# --- 道具（无限获取） ---
 	vbox.add_child(UiStyle.title_bar("道具（点击 +1 无限获取）"))
@@ -156,8 +166,12 @@ func _apply_attr(kind: String, spin: SpinBox) -> void:
 		"luck":
 			_main.player.set_luck(int(spin.value))
 
-func _apply_attack(attack_id: String) -> void:
-	_main.debug_set_attack(attack_id)
+func _give_weapon(weapon_id: String) -> void:
+	_main.debug_give_weapon(weapon_id)
+	refresh()
+
+func _remove_weapon(weapon_id: String) -> void:
+	_main.debug_remove_weapon(weapon_id)
 	refresh()
 
 func _give_item(item_id: String) -> void:

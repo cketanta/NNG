@@ -78,16 +78,19 @@ func _process(_delta: float) -> bool:
 			print("[OK] attribute setters applied")
 		else:
 			_failures.append("attribute setters failed")
-		_main.debug_set_attack("blade")
-		if _main.get_node("Player/WeaponManager").get("active_attack_id") == "blade":
-			print("[OK] debug switch attack to blade")
+		_main.debug_give_weapon("blade")
+		var slots: Array = _player.get("weapon_slots")
+		if _count_slots(slots, "blade") == 1:
+			print("[OK] debug give weapon (blade)")
 		else:
-			_failures.append("debug attack switch to blade failed")
-		_main.debug_set_attack("revolver")
-		if _main.get_node("Player/WeaponManager").get("active_attack_id") == "revolver":
-			print("[OK] debug switch attack to revolver")
+			_failures.append("debug give blade failed")
+		_main.debug_give_weapon("blade")
+		_main.debug_remove_weapon("blade")
+		slots = _player.get("weapon_slots")
+		if _count_slots(slots, "blade") == 1:
+			print("[OK] debug remove weapon (blade)")
 		else:
-			_failures.append("debug attack switch to revolver failed")
+			_failures.append("debug remove blade failed")
 	elif _frames == 6:
 		# 无限道具：不扣钱。
 		var gold_before: int = _player.get("gold")
@@ -169,6 +172,13 @@ func _send_esc() -> void:
 		if root.is_input_handled():
 			return
 	_main._unhandled_input(ev)
+
+func _count_slots(slots: Array, id: String) -> int:
+	var n := 0
+	for s in slots:
+		if s.id == id:
+			n += 1
+	return n
 
 func _finish() -> void:
 	if _failures.is_empty():

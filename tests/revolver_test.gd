@@ -1,11 +1,12 @@
 extends SceneTree
-## 左轮天赋测试：弹头/弹匣/快枪手 终值、追踪开关、转盘天赋启用、连射弹数。
+## 左轮天赋测试（每武器独立天赋树）：弹头/弹匣/快枪手终值、追踪开关、转盘天赋、连射弹数。
 
 var _frames := 0
 var _failures: Array[String] = []
 var _main: Node
 var _player: Node2D
 var _revolver: Node2D
+var _tree
 
 func _initialize() -> void:
 	var scene := load("res://scenes/main.tscn")
@@ -14,13 +15,21 @@ func _initialize() -> void:
 	root.add_child(_main)
 	current_scene = _main
 	_player = _main.get_node("Player")
-	_revolver = _main.get_node("Player/WeaponManager/Revolver")
 
 func _process(_delta: float) -> bool:
 	_frames += 1
 	if _frames == 1:
 		_main.start_with_weapon("pistol")
-		_main.debug_set_attack("revolver")
+		_main.debug_give_weapon("revolver")
+		var slots: Array = _player.get("weapon_slots")
+		var idx := _find_idx(slots, "revolver")
+		_tree = slots[idx].tree
+		_tree.points = 100
+		var wm: Node = _main.get_node("Player/WeaponManager")
+		for child in wm.get_children():
+			if child.get("weapon_id") == "revolver":
+				_revolver = child
+		_revolver.set_talent_tree(_tree)
 		_revolver.call("_apply_talents")
 		_check_base()
 		_grant("rev_bullet_1")
@@ -40,23 +49,28 @@ func _process(_delta: float) -> bool:
 			print("[OK] spinner talent enabled")
 		else:
 			_failures.append("spinner not enabled")
-		# 连射：弹匣 1 → 每次开火 2 发。
-		var before := get_nodes_in_group("friendly_projectiles").size()
 		_revolver.set_aim_direction(Vector2.RIGHT)
-		_revolver.call("fire")
+		_revolver.call("fire")  # 触发连射序列（弹匣 1 → 2 连发）
+		if _revolver.get("_burst_remaining") == 2:
+			print("[OK] mag_1 -> burst of 2 consecutive shots")
+		else:
+			_failures.append("burst_remaining=%d" % _revolver.get("_burst_remaining"))
+		# 模拟连射：连续发射 2 枚子弹。
+		var before := get_nodes_in_group("friendly_projectiles").size()
+		for i in range(2):
+			_revolver.call("_process", 0.1)
 		var bullets := get_nodes_in_group("friendly_projectiles").size() - before
 		if bullets == 2:
-			print("[OK] revolver fires 2 bullets with mag_1")
+			print("[OK] burst fires 2 consecutive bullets")
 		else:
-			_failures.append("revolver bullets=%d" % bullets)
+			_failures.append("burst bullets=%d" % bullets)
 		_finish()
 		return true
 	return false
 
 func _grant(tid: String) -> void:
-	var tree = _main.get("talent_tree")
-	tree.points += 1
-	if not tree.unlock("revolver", tid):
+	_tree.points += 1
+	if not _tree.unlock("revolver", tid):
 		_failures.append("cannot unlock %s" % tid)
 
 func _check_base() -> void:
@@ -66,7 +80,6 @@ func _check_base() -> void:
 		_failures.append("revolver base wrong (dmg=%d cd=%.2f bullets=%d)" % [_revolver.get("damage"), _revolver.get("cooldown"), _revolver.get("_bullet_count")])
 
 func _check_buffs() -> void:
-	# 弹匣1 +1弹、弹头1 +10%（取整仍 4）、快枪手1 cd×0.9。
 	if _revolver.get("_bullet_count") == 2:
 		print("[OK] mag_1 -> 2 bullets")
 	else:
@@ -79,6 +92,12 @@ func _check_buffs() -> void:
 		print("[OK] quick_1 -> cd 0.81")
 	else:
 		_failures.append("cooldown=%.3f" % _revolver.get("cooldown"))
+
+func _find_idx(slots: Array, id: String) -> int:
+	for i in range(slots.size()):
+		if slots[i].id == id:
+			return i
+	return -1
 
 func _finish() -> void:
 	if _failures.is_empty():

@@ -21,15 +21,14 @@ var gold := 0
 var xp := 0
 var xp_max := 5
 var level := 1
-# 攻击方式等级：初始破旧手枪为 1，短刃/左轮在首次升级选择后才置 1（等级固定，仅作拥有标记）。
-var weapon_levels: Dictionary = { "pistol": 1, "blade": 0, "revolver": 0 }
+# --- 武器库存（商店购买，最多 8 把，环绕玩家） ---
+const MAX_WEAPON_SLOTS := 8
+var weapon_slots: Array[Dictionary] = []  # 每项 { id, level, tree }；tree = 该武器独立天赋树
 
 # --- 战斗属性 ---
-# 天赋树驱动：攻击方式每帧读 talent_tree 算终值；玩家侧倍率由攻击方式（如短刃狂战）设置。
-var talent_tree: TalentTree  # 由 main 创建并注入，攻击方式节点据此算天赋终值
-var attack_id := "pistol"    # 当前攻击方式（与 WeaponManager.active_attack_id 同步）
-var move_speed_mult := 1.0   # 移速倍率（狂战 1.3）
-var body_scale := 1.0        # 体型倍率（狂战 1.5）
+var player_talent := PlayerTalent.new()  # 人物天赋（经验升级发点）
+var move_speed_mult := 1.0   # 移速倍率（人物天赋疾跑）
+var body_scale := 1.0        # 体型倍率（短刃狂战武器天赋）
 
 # --- 道具与人物属性（道具驱动，见 buy_item） ---
 var item_counts: Dictionary = {}   # 道具 id -> 已获得数量
@@ -42,6 +41,8 @@ var move_speed_bonus := 0          # 移速加算（跑鞋累计，基础 240）
 func _ready() -> void:
 	hp = max_hp
 	add_to_group("player")
+	# 开局持有初始武器：破旧手枪 Lv.1。
+	weapon_slots.append({ "id": "pistol", "level": 1, "tree": TalentTree.new() })
 	# 初始隐藏：开局（难度/选武暂停）不渲染玩家，进入战斗后由 main 显示。
 	visible = false
 	hurtbox.body_entered.connect(_on_hurtbox_body_entered)
@@ -96,8 +97,73 @@ func set_speed(value: float) -> void:
 func set_luck(value: int) -> void:
 	luck = maxi(value, 0)
 
-func set_weapon_level(weapon_id: String, value: int) -> void:
-	weapon_levels[weapon_id] = maxi(value, 0)  # 武器节点由 WeaponManager 每帧同步
+## 商店购买武器：空槽入槽；槽满且已有同名 → 自动合成；槽满且无同名 → 返回 false。
+func add_weapon(weapon_id: String, level: int = 1) -> bool:
+	if weapon_slots.size() >= MAX_WEAPON_SLOTS:
+		var idx := find_slot_by_id(weapon_id)
+		if idx < 0:
+			return false
+		_merge_into_slot(idx, level)
+		return true
+	var tree := TalentTree.new()
+	tree.points = level  # 武器等级 N = N 点武器天赋点
+	weapon_slots.append({ "id": weapon_id, "level": level, "tree": tree })
+	return true
+
+## 把 level 级同名武器合并进已有槽位：等级相加，点数按新等级减去已点天赋数重算。
+func _merge_into_slot(idx: int, add_level: int) -> void:
+	var slot: Dictionary = weapon_slots[idx]
+	slot.level += add_level
+	var owned_count: int = slot.tree.owned_ids(slot.id).size()
+	slot.tree.points = maxi(slot.level - owned_count, 0)
+
+## 商店手动合成：点选两把同名武器槽位，等级相加，保留等级高者的天赋树与已点天赋。
+func combine_slots(a: int, b: int) -> bool:
+	if a == b or a < 0 or b < 0 or a >= weapon_slots.size() or b >= weapon_slots.size():
+		return false
+	var sa: Dictionary = weapon_slots[a]
+	var sb: Dictionary = weapon_slots[b]
+	if sa.id != sb.id:
+		return false
+	var keep_idx := a if sa.level >= sb.level else b
+	var drop_idx := a if sa.level < sb.level else b
+	var keep: Dictionary = weapon_slots[keep_idx]
+	keep.level = sa.level + sb.level
+	var owned_count: int = keep.tree.owned_ids(sa.id).size()
+	keep.tree.points = maxi(keep.level - owned_count, 0)
+	weapon_slots.remove_at(drop_idx)
+	return true
+
+## 移除槽位（出售用），返回该武器 id。
+func remove_slot(idx: int) -> String:
+	if idx < 0 or idx >= weapon_slots.size():
+		return ""
+	var slot: Dictionary = weapon_slots[idx]
+	weapon_slots.remove_at(idx)
+	return slot.id
+
+## 同名武器的第一个槽位索引（无则 -1）。
+func find_slot_by_id(weapon_id: String) -> int:
+	for i in range(weapon_slots.size()):
+		if weapon_slots[i].id == weapon_id:
+			return i
+	return -1
+
+## 同名武器的最高等级（成本/展示用）。
+func weapon_level(weapon_id: String) -> int:
+	var best := 0
+	for slot in weapon_slots:
+		if slot.id == weapon_id:
+			best = maxi(best, slot.level)
+	return best
+
+## 空槽数量。
+func available_slot_count() -> int:
+	return MAX_WEAPON_SLOTS - weapon_slots.size()
+
+## 按人物天赋层数应用玩家侧倍率（移速）；攻速/范围/伤害由攻击节点读 player_talent 计算。
+func apply_personal_talents() -> void:
+	move_speed_mult = 1.0 + 0.1 * player_talent.owned_count("move_speed")
 
 ## 调试：移除道具（减计数并撤销玩家侧效果；武器侧效果由 WeaponManager 每帧按 item_counts 重算）。
 func remove_item(item_id: String) -> void:
@@ -118,9 +184,6 @@ func remove_item(item_id: String) -> void:
 			hp_changed.emit(hp, max_hp)
 		"heal":
 			pass  # 已回的血不扣回，仅减计数
-
-func add_weapon_level(weapon_id: String) -> void:
-	weapon_levels[weapon_id] = weapon_levels.get(weapon_id, 1) + 1
 
 func take_damage(amount: int) -> void:
 	if hp <= 0:
