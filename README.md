@@ -1,130 +1,44 @@
 # NNG — 类吸血鬼幸存者 2D 生存刷怪游戏
+# NNG — Vampire-Survivors-like 2D Survival Shooter
 
-> 当前版本：**v1.3.0**（版本日志见 `VERSIONS.md`，每次「记作版本」都在顶部追加）
+> 当前版本 Current Version: **v1.3.0**
+>
+> 🤖 **纯 AI 项目 / Pure AI Project**：本游戏由 Claude（Anthropic AI）全程编写生成，代码、场景、贴图、测试均为 AI 产出。
+> This game is entirely written by AI (Claude) — code, scenes, art and tests are all AI-generated.
 
-基于 **Godot 4.7**（Forward Plus）的 2D 平面刷怪生存游戏。核心特色：**武器商店化**（8 槽位环绕玩家 + 同名合成 + 等级）与**双天赋系统**（人物天赋 + 每把武器独立天赋树）。所有角色/弹幕/拾取物目前是占位图形，无需外部素材。
+---
 
-## 运行方式
+## 操作 Controls
 
-1. 用 Godot 4.7 打开项目根目录
-2. 按 **F5** 运行
-3. 主场景：`scenes/main.tscn`
-
-## 操作
-
-| 按键 | 功能 |
+| 按键 Key | 功能 Function |
 |---|---|
-| **WASD** | 移动 |
-| **Tab** | 切换攻击模式：自动索敌（AUTO）/ 手动瞄准（MANUAL，按住左键射击） |
-| **鼠标左键** | 手动模式下射击 |
-| **鼠标右键** | 左轮「转盘枪手」天赋的特殊攻击（扔手枪旋转攻击一周） |
-| **T** | 天赋界面：人物天赋 + 武器天赋（点选武器切换其天赋树加点） |
-| **B** | 背包（属性 / 武器 / 道具） |
-| **L** | 调试面板（仅测试模式，可调波数/金币/属性/武器/道具） |
-| **Esc** | 暂停菜单；各界面内返回 / 关闭 |
+| **WASD** | 移动 Move |
+| **Tab** | 切换攻击模式：自动索敌 / 手动瞄准 Toggle auto / manual aim |
+| **鼠标左键 LMB** | 手动模式下射击 Fire (manual mode) |
+| **鼠标右键 RMB** | 左轮「转盘枪手」特殊攻击 Revolver spinner special attack |
+| **T** | 天赋界面（人物天赋 + 武器天赋） Talent menu (personal + weapon) |
+| **B** | 背包 Backpack |
+| **L** | 调试面板（仅测试模式） Debug panel (test mode only) |
+| **Esc** | 暂停 / 关闭菜单 Pause / Close menu |
 
-## 玩法循环
+## 玩法循环 Gameplay Loop
 
-**开局流程**：选**难度**（简单/普通/困难）→ 以初始「破旧手枪」直接开战，武器环绕玩家旋转。
+**中文**：开局选**难度**（简单/普通/困难），以初始「破旧手枪」直接开战，武器环绕玩家旋转。每波 25 秒，敌人随时间变多变快；波末清场进入**商店**（买武器 / 买道具 / 出售 / 合成），点「开始下一波」继续。打怪掉落经验宝石与金币（靠近自动磁吸）、概率掉红心回血；升级获得**人物天赋点**；生命归零进入结算界面（难度 / 击杀 / 波次 / 等级 / 金币 / 时间）。
 
-**定时波**：每波 25 秒，敌人随时间变多变快。波结束清场 → 自动进**商店**（暂停）→ 点「开始下一波」进入下一波。
+**EN**: Pick a difficulty (Easy/Normal/Hard) at start, then fight with the starter pistol while weapons orbit around you. Each wave lasts 25s and gets tougher; after clearing, enter the shop (buy weapons / items, sell, merge) then start the next wave. Enemies drop XP gems and coins (auto-magnet), sometimes hearts to heal. Leveling up grants **personal talent points**. Game over shows a summary (difficulty / kills / wave / level / gold / time).
 
-- **打怪掉落**：经验宝石（青）+ 金币（黄）+ 概率红心（回血），靠近自动磁吸拾取
-- **经验**：满格升级 → **人物天赋点 +1**（屏幕下方提示），按 T 加点
-- **游戏结束**：生命归零 → Game Over → 结算（难度/击杀/波次/等级/金币/时间）
+## 武器系统 Weapon System
 
-## 武器系统（v1.3.0）
+**中文**：最多持有 **8 把武器**（槽位），武器环绕玩家旋转、每把独立瞄准攻击，各有独立**等级**与**天赋树**。商店售卖**短刃**（近战挥砍）与**左轮**（远程高伤）：有空槽入槽，槽满且已有同名则自动合成升级。**合成**（仅商店）：在槽位点选两把同名武器，等级相加、保留高等级天赋树、多出等级转为天赋点。**出售**：可卖任意武器（含初始手枪），价格 = 购买价值一半。武器等级 Lv.N 提供 N 点该武器的天赋点。
 
-- **8 个武器槽位**：每把武器有独立**等级**与**独立天赋树**；武器环绕玩家缓慢旋转，每把独立瞄准、独立开火
-- **商店售卖**：短刃（近战挥砍）/ 左轮（远程高伤），价格随等级递增
-  - 购买：有空槽 → 入槽；槽满且已有同名 → **自动合成升级**；槽满且无同名 → 禁止购买
-- **合成（仅商店）**：在武器槽位中点选两把同名武器 → 等级相加，保留高等级那把的天赋树与已点天赋，等级多出的部分转化为可用天赋点
-- **出售**：商店可出售任意武器（含初始手枪），售价 = 购买价值一半；商店不卖手枪
-- **武器等级 = 武器天赋点**：Lv.N 提供 N 点该武器的天赋点
+**EN**: Hold up to **8 weapons** (slots) orbiting the player, each aiming and firing independently with its own **level** and **talent tree**. The shop sells **Blade** (melee slash) and **Revolver** (ranged heavy): empty slot = add; full slots with a same-name weapon = auto-merge. **Merge** (shop only): click two same-name weapons, levels sum up, keep the higher-level talent tree, excess levels become talent points. **Sell** any weapon (including the starter pistol) for half its value. Weapon level N grants N talent points for that weapon.
 
-### 短刃天赋（近战）
-范围扩大 / 利刃出鞘 / 拔刀术 线性强化；气刃斩 + 气刃专精 + 气刃大回旋（白色扩散环）；狂战（变大/加速/加伤）；双/三/四刀流；致残流血（叠层，受击额外流血层数伤害）。
+## 天赋系统 Talent System
 
-### 左轮天赋（远程）
-弹头改良 / 弹匣扩容（连续发射）/ 快枪手 线性强化；转盘枪手（右键扔枪旋转攻击一周，期间无法主动攻击）；枪斗术 / 智能制导（子弹追踪）。
+**中文**：
+- **人物天赋**（升级获得点数）：疾跑（移速 +10%/级）、迅捷（攻速 +8%/级）、延伸（范围 +12%/级）、狂力（伤害 +10%/级），各 5 级，加成作用于所有武器。
+- **武器天赋**（每把武器独立，等级提供点数）：短刃——范围 / 伤害 / 攻速强化、气刃斩与大回旋、狂战（变大加速加伤）、多刀流、致残流血；左轮——弹头 / 弹匣（连续发射）/ 攻速强化、转盘枪手（右键扔枪旋转攻击）、子弹追踪。按 T 打开天赋界面，点选武器切换其天赋树，三选一加点。
 
-## 人物天赋（与经验挂钩）
-
-升级获得人物天赋点，4 条分支各 5 级，加成作用于所有武器：
-
-| 分支 | 效果 |
-|---|---|
-| **疾跑** | 移动速度 +10%/级 |
-| **迅捷** | 攻击速度 +8%/级 |
-| **延伸** | 攻击范围 +12%/级 |
-| **狂力** | 伤害 +10%/级 |
-
-## 自动化测试
-
-17 个**无头冒烟测试**，改代码后一键验证核心逻辑（全部通过退出码 0，任一失败为 1）：
-
-```bash
-GD="C:/Program Files (x86)/Steam/steamapps/common/Godot Engine/godot.windows.opt.tools.64.exe"
-for t in smoke start difficulty shop item weapons talent backpack debug combat result pause gem blade revolver player_talent synthesis; do
-  "$GD" --headless --path . --script res://tests/${t}_test.gd
-done
-```
-
-| 测试 | 覆盖 |
-|---|---|
-| `smoke` | 输入动作 / 波次刷怪 / 武器击杀 / 掉落拾取 |
-| `start` | 开局流程 / 初始手枪入槽 / WeaponManager 实例化 |
-| `difficulty` | 难度倍率下发 / 困难敌人缩放 |
-| `shop` | 买武器入槽 / 槽满同名自动合成 / 买道具 / 出售半价 / 槽位合成 |
-| `item` | 道具购买与玩家侧效果 / 唯一道具 / 商店刷新 |
-| `weapons` | 多武器环绕 / 每武器独立天赋树 / 发射 |
-| `talent` | 人物天赋发点 / 武器天赋按等级点数 / 三选一 / 前置冲突 / 测试模式点亮 |
-| `backpack` | 属性 / 武器（无天赋）/ 道具 |
-| `debug` | 调试面板 / 波数金币属性 / 武器加减 / 道具 |
-| `combat` | 模式切换 + HUD / 弹幕接触伤害 / Game Over / 停火 |
-| `result` | 结算界面（主动结束 / 死亡）|
-| `pause` | Esc 分发 / 暂停开合 |
-| `gem` | 经验宝石 / 金币 磁吸拾取 |
-| `blade` | 短刃天赋终值 / 气刃 / 流血 / 大回旋 |
-| `revolver` | 左轮天赋终值 / 连射 / 追踪 / 转盘 |
-| `player_talent` | 人物天赋 4 分支加点与移速倍率 |
-| `synthesis` | 合成：等级相加 / 保留天赋树 / 点数转化 |
-
-（godot 不在 PATH 时用完整路径，如 Steam 版示例。）
-
-## 项目结构
-
-```
-scenes/
-  main.tscn            主场景（玩家 + 刷怪器 + HUD + 商店/天赋/背包/暂停/调试面板）
-  player.tscn          玩家（WeaponManager 按槽位运行时实例化武器）
-  enemies/             近战 / 远程敌人
-  weapons/             武器场景（pistol/blade/revolver/projectile 等）
-  items/               经验宝石 / 金币 / 红心 / 黑洞
-scripts/
-  main.gd              状态机、商店（购买/出售/合成）、天赋接线、波次
-  player.gd            武器槽位（8）、人物天赋、受击、经验金币
-  attacks/             破旧手枪 / 短刃 / 左轮 / 转盘枪手
-  systems/             talent_tree.gd（武器天赋树）、player_talent.gd（人物天赋）、item_defs.gd（道具）
-  weapons/             weapon_manager.gd（多武器环绕）、projectile.gd（弹幕）
-  effects/             ring_wave.gd（气刃大回旋扩散环）
-  ui/                  商店/天赋/背包/难度/暂停/调试面板 + 天赋树状图控件
-themes/cjk_theme.tres  中文默认字体主题
-tests/                 17 个无头测试
-```
-
-## 碰撞层级（1~6）
-
-| 层 | 掩码值 | 归属 |
-|---|---|---|
-| 2 | 2 | 玩家（身体 + 受击盒） |
-| 3 | 4 | 敌人 |
-| 4 | 8 | 友方弹幕 |
-| 5 | 16 | 敌方弹幕 |
-| 6 | 32 | 武器命中区（挥砍 / 气刃） |
-
-## 备注
-
-- HUD / 面板文字用系统字体（微软雅黑等），跨平台显示异常可改 `themes/cjk_theme.tres`。
-- 面板打开时 `get_tree().paused = true`，面板节点 `process_mode = WHEN_PAUSED`；`main.gd` 的 `auto_pause_menus` 可关（测试用）。
-- 导出物在 `exports/`（不入库，随时可一键重新导出）。
+**EN**:
+- **Personal talents** (points from leveling): Sprint (+10% speed/level), Swift (+8% attack speed/level), Reach (+12% range/level), Power (+10% damage/level), 5 tiers each, applying to all weapons.
+- **Weapon talents** (independent per weapon, points from weapon level): Blade — range/damage/speed boosts, Air Blade & Grand Slash, Berserk (bigger/faster/stronger), multi-slash, bleeding; Revolver — bullet/magazine (consecutive fire)/speed boosts, Spinner (RMB throws the gun), homing bullets. Press T to open the talent menu, click a weapon to switch its tree, pick 1 of 3 drawn talents.
