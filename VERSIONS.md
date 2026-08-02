@@ -4,12 +4,20 @@
 
 **约定**：每次说「记作版本」，就按下面的格式在顶部追加一条记录（版本号递增，如 1.0.0 → 1.0.1 → 1.1.0），并保留此说明。
 
+**导出约定**（2026-08-01 起）：每次「记作版本」的同时，自动执行一次导出并存档（无需另说）：
+- 导出目录：项目根目录 `exports/`，每次导出的文件放在 `exports/v{版本号}/` 文件夹下（如 `exports/v1.1.2/`）
+- 导出文件名沿用已有命名：`NNG_Ver{版本号}.exe`（Windows Desktop，`script_export_mode=2` 源码编译，`embed_pck=true` **单文件**，资源内嵌 exe、无外置 `.pck`）
+- 命令：`godot --headless --export-release "Windows Desktop" exports/v{版本号}/NNG_Ver{版本号}.exe`
+- 同时在导出文件夹内生成 `readme.txt`：最上方为当前版本的游戏操作介绍（随版本自行更新），下方按从新到旧记录 v1.0.0 → 当前版本的更新内容摘要（面向玩家，只写内容、不写代码与原理）
+- 不做 zip 压缩（2026-08-01 取消）
+- `export_presets.cfg` 的 `export_path` 同步更新到当前版本路径（保证编辑器内导出一致）
+
 ---
 
 ## v1.1.2
 
 **日期**：2026-08-01
-**状态**：道具块状卡片显示 + 测试模式调试面板（L 键）+ 背包/武器/玩家渲染优化 + 游戏结束整链停火。
+**状态**：道具块状卡片显示 + 测试模式调试面板（L 键）+ 背包/武器/玩家渲染优化 + 游戏结束整链停火 + 导出存档体系（单文件 + readme）+ 程序图标（玩家占位）。
 
 **包含内容**：
 - 道具显示块状化：`UiStyle.item_card()/card_label()` 新增，背包道具区、商店左侧道具栏、商店右侧购买区全部改为每道具一张圆角卡片（稀有度色名称×数量 + 描述），上下堆叠以卡片边框区分
@@ -20,6 +28,8 @@
 - 游戏结束停火（真实根因）：子武器节点独立 `_process` 会保留最后的 `_firing` 继续开火；新增 `WeaponManager.halt()` 停整条武器链（WeaponManager + 所有子武器），`player.die()` 与 `main.end_game()`（死亡/主动结束）均调用
 - 背包道具卡片移除「总加成」显示行
 - 调试用 setter：`player.gd` 新增 `set_gold/set_level/set_max_hp/set_defense/set_speed/set_luck/set_weapon_level/remove_item`，各自 emit 信号自动刷 HUD；`main.debug_set_item_count` 按差额逐次增减保证玩家侧效果与计数一致
+- 导出存档体系（2026-08-01）：项目根新增 `exports/` 目录存放导出物；`export_presets.cfg` 导出路径改到项目内 `exports/v{版本号}/`、`embed_pck=true` **单文件**（资源内嵌 exe、无外置 pck）；约定「记作版本」时自动导出，并在版本文件夹内生成 `readme.txt`（顶部操作介绍 + 各版本更新摘要，面向玩家不写代码/原理），详见文件头「导出约定」
+- 程序图标（2026-08-01）：`assets/icon.svg`（复现玩家占位外观：深蓝/亮蓝同心圆 + 白心）+ 工具 `scripts/tools/icon_gen.gd`（SVG → 256×256 PNG）生成 `assets/icon.png`；`export_presets.cfg application/icon` 与 `project.godot config/icon` 均指向它，导出 exe 与编辑器运行时的窗口标题栏/任务栏图标均为玩家图标
 
 **关键文件**（回退时对照）：
 - `scripts/ui/debug_panel.gd`（新增）：测试模式调试面板
@@ -31,7 +41,11 @@
 - `scripts/ui/difficulty_panel.gd`：新增「测试模式」按钮
 - `scripts/weapons/whip/staff/splitter/black_hole_gun.gd`：贴图懒加载 + 初始隐藏
 - `scenes/main.tscn`：新增 DebugPanel 节点
-- `project.godot`：新增 `toggle_debug` action（L 键）
+- `project.godot`：新增 `toggle_debug` action（L 键）；`config/name="NNG"`、`config/icon`
+- `assets/icon.svg`（新增）、`assets/icon.png`（新增）：程序图标（玩家占位外观）
+- `scripts/tools/icon_gen.gd`（新增）：SVG→PNG 图标生成工具
+- `export_presets.cfg`：导出路径入 `exports/`、`embed_pck=true`、`application/icon`
+- `.gitignore`：忽略 `exports/`（导出产物不入库）
 - `tests/debug_test.gd`（新增）、`combat/result/difficulty/start/debug` 断言扩展
 
 **已知问题（本版本不带）**：
@@ -39,7 +53,9 @@
 - 分裂者全向环密度饱和后视觉难分辨数量——按用户选择不改
 - 高密度+满级武器长时间下存在物理引擎卡死隐患——1.0.0 已知，未修
 
-**备注**：全量 13 个无头测试全过（新增 debug_test；扩展 combat/result/difficulty/start/debug 断言）。
+**导出**：`exports/v1.1.2/NNG_Ver1.1.2.exe`（单文件，`embed_pck=true`，2026-08-01 重新导出；含程序图标 `assets/icon.png`，玩家占位外观：深蓝/亮蓝同心圆+白心）+ `exports/v1.1.2/readme.txt`（操作介绍 + 各版本更新摘要）。
+
+**备注**：全量 13 个无头测试全过（新增 debug_test；扩展 combat/result/difficulty/start/debug 断言）。导出存档体系、程序图标、`config/name="NNG"` 并入 v1.1.2 后重新提交 git；导出产物 `exports/` 不入库（随时可一键重新导出）。
 
 ## v1.1.1
 
