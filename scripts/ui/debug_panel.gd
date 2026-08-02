@@ -10,7 +10,6 @@ var _wave_time_spin: SpinBox
 var _gold_spin: SpinBox
 var _level_spin: SpinBox
 var _attr_spins: Dictionary = {}   # 属性名 -> SpinBox（speed/defense/max_hp/luck）
-var _weapon_spins: Dictionary = {} # 武器 id -> SpinBox
 var _item_spins: Dictionary = {}  # 道具 id -> 数量 SpinBox（可直接输入目标数量）
 var _updating := false  # refresh 设值期间防 value_changed 递归
 
@@ -56,12 +55,13 @@ func _build_ui() -> void:
 		_attr_spins[kind] = spin
 		vbox.add_child(_make_adjust_row(spec["label"], spin, _apply_attr.bind(kind, spin)))
 
-	# --- 武器等级 ---
-	vbox.add_child(UiStyle.title_bar("武器等级"))
-	for weapon_id in _main.weapon_ids():
-		var spin := _new_spin(0, 999, 1)
-		_weapon_spins[weapon_id] = spin
-		vbox.add_child(_make_adjust_row(_main.weapon_name(weapon_id), spin, _apply_weapon.bind(weapon_id, spin)))
+	# --- 攻击方式切换 ---
+	vbox.add_child(UiStyle.title_bar("攻击方式（测试切换）"))
+	for attack_id in _main.attack_ids():
+		var attack_btn := Button.new()
+		attack_btn.text = "切换为 " + _main.attack_name(attack_id)
+		attack_btn.pressed.connect(_apply_attack.bind(attack_id))
+		vbox.add_child(attack_btn)
 
 	# --- 道具（无限获取） ---
 	vbox.add_child(UiStyle.title_bar("道具（点击 +1 无限获取）"))
@@ -104,8 +104,6 @@ func refresh() -> void:
 	_attr_spins["defense"].value = _main.player.defense
 	_attr_spins["max_hp"].value = _main.player.max_hp
 	_attr_spins["luck"].value = _main.player.luck
-	for weapon_id in _weapon_spins:
-		_weapon_spins[weapon_id].value = _main.player.weapon_levels.get(weapon_id, 0)
 	_updating = true
 	for item_id in _item_spins:
 		_item_spins[item_id].value = _main.player.item_counts.get(item_id, 0)
@@ -158,8 +156,9 @@ func _apply_attr(kind: String, spin: SpinBox) -> void:
 		"luck":
 			_main.player.set_luck(int(spin.value))
 
-func _apply_weapon(weapon_id: String, spin: SpinBox) -> void:
-	_main.player.set_weapon_level(weapon_id, int(spin.value))
+func _apply_attack(attack_id: String) -> void:
+	_main.debug_set_attack(attack_id)
+	refresh()
 
 func _give_item(item_id: String) -> void:
 	_main.debug_give_item(item_id)

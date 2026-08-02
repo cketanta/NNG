@@ -21,15 +21,15 @@ var gold := 0
 var xp := 0
 var xp_max := 5
 var level := 1
-# 武器初始 0 级；开局选中的武器变为 1，其余可在商店购买。
-var weapon_levels: Dictionary = { "whip": 0, "staff": 0, "splitter": 0, "black_hole_gun": 0 }
+# 攻击方式等级：初始破旧手枪为 1，短刃/左轮在首次升级选择后才置 1（等级固定，仅作拥有标记）。
+var weapon_levels: Dictionary = { "pistol": 1, "blade": 0, "revolver": 0 }
 
 # --- 战斗属性 ---
-# 天赋树已停用，以下倍率恒为 1.0（不再被更新），道具改用加算/乘算作用于基础值。
-var move_speed_mult := 1.0
-var attack_speed_mult := 1.0
-var attack_range_mult := 1.0
-var damage_mult := 1.0
+# 天赋树驱动：攻击方式每帧读 talent_tree 算终值；玩家侧倍率由攻击方式（如短刃狂战）设置。
+var talent_tree: TalentTree  # 由 main 创建并注入，攻击方式节点据此算天赋终值
+var attack_id := "pistol"    # 当前攻击方式（与 WeaponManager.active_attack_id 同步）
+var move_speed_mult := 1.0   # 移速倍率（狂战 1.3）
+var body_scale := 1.0        # 体型倍率（狂战 1.5）
 
 # --- 道具与人物属性（道具驱动，见 buy_item） ---
 var item_counts: Dictionary = {}   # 道具 id -> 已获得数量
@@ -50,8 +50,8 @@ func _ready() -> void:
 
 func _physics_process(_delta: float) -> void:
 	var input_dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	# 移速 = 基础速度 + 跑鞋加算（天赋停用，不再乘 move_speed_mult）。
-	velocity = input_dir * (speed + move_speed_bonus)
+	# 移速 =（基础速度 × 移速倍率）+ 跑鞋加算。
+	velocity = input_dir * (speed * move_speed_mult + move_speed_bonus)
 	move_and_slide()
 	_apply_contact_damage()
 
@@ -122,13 +122,6 @@ func remove_item(item_id: String) -> void:
 func add_weapon_level(weapon_id: String) -> void:
 	weapon_levels[weapon_id] = weapon_levels.get(weapon_id, 1) + 1
 
-## 根据天赋树已点层级重新计算玩家的各项属性倍率。
-func apply_talent_stats(tree) -> void:
-	move_speed_mult = 1.0 + 0.10 * tree.owned_count("move_speed")
-	attack_speed_mult = 1.0 + 0.08 * tree.owned_count("attack_speed")
-	attack_range_mult = 1.0 + 0.12 * tree.owned_count("attack_range")
-	damage_mult = 1.0 + 0.10 * tree.owned_count("damage")
-
 func take_damage(amount: int) -> void:
 	if hp <= 0:
 		return
@@ -175,10 +168,10 @@ func die() -> void:
 		weapon_manager_node.call("halt")
 
 func _draw() -> void:
-	# 占位蓝色圆；以后换成贴图。
-	draw_circle(Vector2.ZERO, 15.0, Color(0.2, 0.35, 0.7))
-	draw_circle(Vector2.ZERO, 14.0, Color(0.4, 0.65, 1.0))
-	draw_circle(Vector2.ZERO, 5.0, Color(0.85, 0.92, 1.0))
+	# 占位蓝色圆；体型倍率（狂战）放大整体。
+	draw_circle(Vector2.ZERO, 15.0 * body_scale, Color(0.2, 0.35, 0.7))
+	draw_circle(Vector2.ZERO, 14.0 * body_scale, Color(0.4, 0.65, 1.0))
+	draw_circle(Vector2.ZERO, 5.0 * body_scale, Color(0.85, 0.92, 1.0))
 
 func _apply_contact_damage() -> void:
 	var now := Time.get_ticks_msec() / 1000.0

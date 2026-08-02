@@ -6,8 +6,6 @@ var _frames := 0
 var _failures: Array[String] = []
 var _main: Node
 var _player: Node2D
-var _whip: Node2D
-var _staff: Node2D
 
 func _initialize() -> void:
 	var scene := load("res://scenes/main.tscn")
@@ -16,8 +14,6 @@ func _initialize() -> void:
 	root.add_child(_main)
 	current_scene = _main
 	_player = _main.get_node("Player")
-	_whip = _main.get_node("Player/WeaponManager/Whip")
-	_staff = _main.get_node("Player/WeaponManager/Staff")
 
 func _process(_delta: float) -> bool:
 	_frames += 1
@@ -29,7 +25,6 @@ func _process(_delta: float) -> bool:
 		_check_player_items()
 	elif _frames == 8:
 		_check_unique_and_offerings()
-		_check_weapon_formula()
 		_finish()
 		return true
 	return false
@@ -124,33 +119,6 @@ func _check_unique_and_offerings() -> void:
 		print("[OK] item can be bought again next wave (after refresh)")
 	else:
 		_failures.append("shoes blocked after refresh")
-
-func _check_weapon_formula() -> void:
-	# 近战鞭子：base=1，good_steel+1，whetstone×1.1，ring×1.5 -> (1+1)*1.1*1.5=3.3 -> 3
-	var counts: Dictionary = _player.get("item_counts")
-	var whip_stats: Dictionary = ItemDefs.weapon_final_stats(_whip, counts)
-	if whip_stats.damage == 3:
-		print("[OK] whip final damage=3 (formula)")
-	else:
-		_failures.append("whip damage=%d" % whip_stats.damage)
-	if absf(whip_stats.cooldown - 0.7) < 0.001:
-		print("[OK] whip cooldown=0.7 (no handle)")
-	else:
-		_failures.append("whip cooldown=%f" % whip_stats.cooldown)
-	if absf(whip_stats.range - 70.0 * 1.1) < 0.001:
-		print("[OK] whip range=77 (hammer x1.1)")
-	else:
-		_failures.append("whip range=%f" % whip_stats.range)
-	# 远程法杖：base=1，blast_shot+1，gunpowder×1.1，ring×1.5 -> 3.3 -> 3
-	var staff_stats: Dictionary = ItemDefs.weapon_final_stats(_staff, counts)
-	if staff_stats.damage == 3:
-		print("[OK] staff final damage=3 (formula)")
-	else:
-		_failures.append("staff damage=%d" % staff_stats.damage)
-	if absf(staff_stats.speed - 500.0) < 0.001:
-		print("[OK] staff speed=500 (no scope)")
-	else:
-		_failures.append("staff speed=%f" % staff_stats.speed)
 
 func _finish() -> void:
 	if _failures.is_empty():

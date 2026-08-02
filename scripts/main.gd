@@ -1,6 +1,8 @@
 class_name Main
 extends Node2D
-## 主控制器：波次状态机、经济（经验/金币）、商店/天赋/背包菜单（带暂停）、HUD 更新与游戏结束。
+## 主控制器：波次状态机、经济（经验/金币）、攻击方式选择、天赋树加点、商店/背包/暂停菜单与游戏结束。
+## 攻击方式：初始破旧手枪；首次升级二选一（短刃/左轮）；天赋树围绕所选攻击方式，T 键加点（三选一）。
+## 商店为空商店（武器升级已删、道具系统暂停使用但框架保留）。
 
 const XP_GEM_SCENE := preload("res://scenes/items/xp_gem.tscn")
 const COIN_SCENE := preload("res://scenes/items/coin.tscn")
@@ -8,10 +10,14 @@ const HEART_SCENE := preload("res://scenes/items/heart.tscn")
 
 enum GameState { START, COMBAT, SHOP, GAMEOVER }
 
-const WEAPON_IDS := ["whip", "staff", "splitter", "black_hole_gun"]
-const WEAPON_BASE_COST := { "whip": 8, "staff": 6, "splitter": 10, "black_hole_gun": 12 }
-const WEAPON_NAMES := { "whip": "鞭子", "staff": "法杖", "splitter": "分裂者", "black_hole_gun": "黑洞枪" }
-const WEAPON_NODE_NAMES := { "whip": "Whip", "staff": "Staff", "splitter": "Splitter", "black_hole_gun": "BlackHoleGun" }
+const ATTACK_IDS := ["pistol", "blade", "revolver"]
+const ATTACK_NAMES := { "pistol": "破旧手枪", "blade": "短刃", "revolver": "左轮手枪" }
+const ATTACK_DESCS := {
+	"pistol": "初始攻击方式，单发子弹",
+	"blade": "近战挥砍，攻守均衡",
+	"revolver": "远程高伤，射速偏慢",
+}
+const ATTACK_NODE_NAMES := { "pistol": "Pistol", "blade": "Blade", "revolver": "Revolver" }
 
 const DIFFICULTY_IDS := ["easy", "normal", "hard"]
 const DIFFICULTIES := {
@@ -32,11 +38,12 @@ var talent_tree: TalentTree
 var difficulty_id := "normal"
 var difficulty: Dictionary = DIFFICULTIES["normal"]
 var test_mode := false  # 测试模式：本局可按 L 打开调试面板
+var attack_choice_done := false  # 是否已选择攻击方式（首次升级触发）
 
-# --- 商店道具（每波随机 5 个） ---
+# --- 商店道具框架（道具系统暂停使用，保留数据与函数） ---
 var shop_item_offerings: Array[String] = []
-var purchased_unique: Array[String] = []  # 已购买的唯一道具（不再刷出）
-var bought_items_this_wave: Dictionary = {}  # 本波已购买的道具（每波重置，每道具本波仅可购一次）
+var purchased_unique: Array[String] = []
+var bought_items_this_wave: Dictionary = {}
 
 @onready var player: CharacterBody2D = $Player
 @onready var spawner: Node2D = $Spawner
@@ -45,13 +52,15 @@ var bought_items_this_wave: Dictionary = {}  # 本波已购买的道具（每波
 @onready var shop_panel: ShopPanel = $HUD/ShopPanel
 @onready var talent_panel: TalentPanel = $HUD/TalentPanel
 @onready var backpack_panel: BackpackPanel = $HUD/BackpackPanel
-@onready var start_panel: StartPanel = $HUD/StartPanel
+@onready var attack_select_panel: AttackSelectPanel = $HUD/AttackSelectPanel
 @onready var difficulty_panel: DifficultyPanel = $HUD/DifficultyPanel
 @onready var pause_panel: PausePanel = $HUD/PausePanel
 @onready var debug_panel: DebugPanel = $HUD/DebugPanel
 
 func _ready() -> void:
 	talent_tree = TalentTree.new()
+	player.talent_tree = talent_tree  # 注入玩家，攻击方式每帧读它计算天赋终值
+	player.attack_id = "pistol"
 	player.hp_changed.connect(_on_player_hp_changed)
 	player.xp_changed.connect(_on_player_xp_changed)
 	player.gold_changed.connect(_on_player_gold_changed)
@@ -71,7 +80,7 @@ func _ready() -> void:
 	shop_panel.setup(self)
 	talent_panel.setup(self)
 	backpack_panel.setup(self)
-	start_panel.setup(self)
+	attack_select_panel.setup(self)
 	difficulty_panel.setup(self)
 	pause_panel.setup(self)
 	debug_panel.setup(self)
@@ -92,21 +101,30 @@ func _unhandled_input(event: InputEvent) -> void:
 	if event.is_action_pressed("toggle_backpack") and game_state == GameState.COMBAT and not debug_panel.visible:
 		get_viewport().set_input_as_handled()
 		open_backpack()
+	elif event.is_action_pressed("toggle_talent") and game_state == GameState.COMBAT \
+			and not backpack_panel.visible and not pause_panel.visible and not debug_panel.visible:
+		get_viewport().set_input_as_handled()
+		open_talent()
 	elif event.is_action_pressed("toggle_debug") and test_mode and game_state == GameState.COMBAT \
 			and not backpack_panel.visible and not pause_panel.visible:
 		get_viewport().set_input_as_handled()
 		open_debug()
 	elif event.is_action_pressed("ui_cancel") and game_state == GameState.COMBAT:
-		# 已有面板打开（背包/暂停等）时，Esc 交给面板自己处理返回上一级（回到游戏），不弹暂停菜单。
-		# 面板在 _unhandled_input 里已 set_input_as_handled，正常不会走到这里；这里再兜底判断一次。
-		if not backpack_panel.visible and not pause_panel.visible and not debug_panel.visible:
+		if not backpack_panel.visible and not pause_panel.visible and not debug_panel.visible \
+				and not talent_panel.visible:
 			get_viewport().set_input_as_handled()
 			open_pause()
 
 # --- 开局流程 ---
 
-func weapon_ids() -> Array:
-	return WEAPON_IDS
+func attack_ids() -> Array:
+	return ATTACK_IDS
+
+func attack_name(id: String) -> String:
+	return ATTACK_NAMES.get(id, id)
+
+func attack_desc(id: String) -> String:
+	return ATTACK_DESCS.get(id, "")
 
 func difficulty_ids() -> Array:
 	return DIFFICULTY_IDS
@@ -124,16 +142,16 @@ func choose_difficulty(id: String) -> void:
 	difficulty = DIFFICULTIES[id]
 	_apply_difficulty_to_spawner()
 	difficulty_panel.visible = false
-	open_start()
+	start_game()
 
-## 测试模式：不选难度，按普通倍率进入选武器；本局可按 L 打开调试面板。
+## 测试模式：不选难度，按普通倍率直接开始；本局可按 L 打开调试面板。
 func choose_test_mode() -> void:
 	test_mode = true
 	difficulty_id = "normal"
 	difficulty = DIFFICULTIES["normal"]
 	_apply_difficulty_to_spawner()
 	difficulty_panel.visible = false
-	open_start()
+	start_game()
 
 func _apply_difficulty_to_spawner() -> void:
 	spawner.set_difficulty(
@@ -143,24 +161,31 @@ func _apply_difficulty_to_spawner() -> void:
 		difficulty.get("spawn_density_mult", 1.0))
 	wave_duration = float(difficulty.get("wave_duration", 25.0))
 
-func open_start() -> void:
-	game_state = GameState.START
-	start_panel.visible = true
-	get_tree().paused = true
-
-## 选武面板按 Esc：返回难度选择（上一级）。
-func back_to_difficulty() -> void:
-	start_panel.visible = false
-	difficulty_panel.visible = true
-
-## 用选中的初始武器开战；其余武器保持 0 级（可在商店购买）。
-func start_with_weapon(weapon_id: String) -> void:
-	player.weapon_levels[weapon_id] = 1
-	difficulty_panel.visible = false
-	start_panel.visible = false
-	get_tree().paused = false
+## 开局直接以初始攻击方式（破旧手枪）进入战斗。
+func start_game() -> void:
 	player.visible = true  # 开局菜单结束，进入战斗才渲染玩家
+	weapon_manager.set_active_attack("pistol")
+	get_tree().paused = false
 	start_next_wave()
+
+## 兼容旧测试入口：忽略武器参数，直接开始战斗（初始破旧手枪）。
+func start_with_weapon(_weapon_id: String) -> void:
+	start_game()
+
+# --- 攻击方式选择（首次升级） ---
+
+func choose_attack(attack_id: String) -> void:
+	attack_choice_done = true
+	player.attack_id = attack_id
+	player.weapon_levels[attack_id] = 1
+	talent_tree.attack_id = attack_id
+	weapon_manager.set_active_attack(attack_id)
+	attack_select_panel.visible = false
+	if auto_pause_menus:
+		get_tree().paused = false
+	# 选择攻击方式即送 1 点天赋，引导打开天赋树。
+	talent_tree.points += 1
+	hud.show_talent_hint("已选择 %s！获得 1 天赋点，按 T 打开天赋树" % attack_name(attack_id))
 
 # --- 波次流程 ---
 
@@ -181,18 +206,22 @@ func _clear_remaining_enemies() -> void:
 		if is_instance_valid(enemy):
 			enemy.queue_free()
 
-# --- 商店 ---
+# --- 商店（空商店：无武器升级、无道具出售，只显示状态 + 进入下一波） ---
 
 func open_shop() -> void:
 	game_state = GameState.SHOP
 	if auto_pause_menus:
 		get_tree().paused = true
-	refresh_shop_items()
 	shop_panel.visible = true
 	shop_panel.refresh()
 
-## 每波随机挑 5 个不重复道具；已购买的唯一道具不再进入候选池。
-## 新的一波：重置「本波已购买」记录（道具每波仅可购一次）。
+func close_shop() -> void:
+	shop_panel.visible = false
+	if auto_pause_menus:
+		get_tree().paused = false
+	start_next_wave()
+
+## 每波随机挑 5 个不重复道具；已购买的唯一道具不再进入候选池（道具框架保留，调试可用）。
 func refresh_shop_items() -> void:
 	bought_items_this_wave.clear()
 	var pool: Array[String] = []
@@ -203,86 +232,31 @@ func refresh_shop_items() -> void:
 	pool.shuffle()
 	shop_item_offerings = pool.slice(0, 5)
 
-## 购买道具：校验金币与唯一性 -> 扣款 -> 玩家侧生效 -> 唯一道具记入已购。
+## 道具购买：框架保留（道具系统暂停使用，商店不再调用；调试面板仍可用）。
 func buy_item(item_id: String) -> bool:
 	var cost := ItemDefs.cost(item_id)
 	if player.gold < cost:
 		return false
 	if bought_items_this_wave.get(item_id, false):
-		return false  # 本波该道具已购，不可再购
+		return false
 	if ItemDefs.is_unique(item_id) and item_id in purchased_unique:
 		return false
 	player.gold -= cost
 	player.gold_changed.emit(player.gold)
 	player.buy_item(item_id)
-	bought_items_this_wave[item_id] = true  # 本波该道具已购，不可再购
+	bought_items_this_wave[item_id] = true
 	if ItemDefs.is_unique(item_id):
 		purchased_unique.append(item_id)
 		if item_id == "ring":
-			spawner.set_spawn_rate_mult(2.0)  # 咒戒：刷怪效率 ×2
+			spawner.set_spawn_rate_mult(2.0)
 	shop_panel.refresh()
 	return true
-
-func close_shop() -> void:
-	shop_panel.visible = false
-	if auto_pause_menus:
-		get_tree().paused = false
-	start_next_wave()
-
-func weapon_cost(weapon_id: String) -> int:
-	var level: int = player.weapon_levels.get(weapon_id, 0)
-	var effective := maxi(level, 1)  # 0 级（未拥有）= 按基础价首购
-	return int(round(float(WEAPON_BASE_COST.get(weapon_id, 6)) * (1.0 + 0.5 * float(effective - 1))))
-
-func buy_weapon(weapon_id: String) -> bool:
-	var cost := weapon_cost(weapon_id)
-	if player.gold < cost:
-		return false
-	player.gold -= cost
-	player.gold_changed.emit(player.gold)
-	player.add_weapon_level(weapon_id)
-	shop_panel.refresh()
-	return true
-
-func weapon_name(weapon_id: String) -> String:
-	return WEAPON_NAMES.get(weapon_id, weapon_id)
-
-## 某等级下的效果描述；商店与背包共用。
-func weapon_effect_text(weapon_id: String, level: int) -> String:
-	match weapon_id:
-		"whip":
-			return "近战：Lv.%d 段连斩，逐段扇出" % level
-		"staff":
-			return "远程：每次发射 %d 枚弹幕" % level
-		"splitter":
-			return "分裂：命中分裂 %d 枚小弹（每级+1）" % _weapon_node("Splitter").split_count_for_level(level)
-		"black_hole_gun":
-			return "黑洞：命中产生黑洞（范围 Lv.%d，半径 %d）" % [level, int(_weapon_node("BlackHoleGun").black_hole_radius_for_level(level))]
-	return ""
-
-func _weapon_node(node_name: String) -> Node2D:
-	return player.get_node("WeaponManager/" + node_name)
-
-## 人物属性摘要（移速/防御/血量/幸运），商店与背包共用。
-func player_stats_text() -> String:
-	return "移速 %d\n防御 %d\n血量 %d/%d\n幸运 %d" % [
-		int(player.speed + player.move_speed_bonus),
-		player.defense,
-		player.hp, player.max_hp,
-		player.luck,
-	]
-
-## 某武器的属性摘要（含当前道具加成），商店与背包共用。
-func weapon_attr_text(weapon_id: String) -> String:
-	var node := _weapon_node(WEAPON_NODE_NAMES.get(weapon_id, weapon_id))
-	var stats: Dictionary = ItemDefs.weapon_final_stats(node, player.item_counts)
-	if node.is_melee:
-		return "攻击 %d    冷却 %.1fs    距离 %d" % [stats.damage, stats.cooldown, int(stats.range)]
-	return "攻击 %d    冷却 %.1fs    弹速 %d" % [stats.damage, stats.cooldown, int(stats.speed)]
 
 # --- 天赋 ---
 
 func open_talent() -> void:
+	if not attack_choice_done:
+		return  # 未选择攻击方式前不能加天赋
 	if auto_pause_menus:
 		get_tree().paused = true
 	talent_panel.visible = true
@@ -293,11 +267,9 @@ func close_talent() -> void:
 	if auto_pause_menus:
 		get_tree().paused = false
 
-func _on_talent_purchased(branch_id: String) -> void:
-	if talent_tree.unlock(branch_id):
-		player.apply_talent_stats(talent_tree)
+func _on_talent_purchased(attack_id: String, talent_id: String) -> void:
+	if talent_tree.unlock(attack_id, talent_id):
 		talent_panel.refresh()
-		backpack_panel.refresh()
 
 # --- 背包 ---
 
@@ -311,6 +283,24 @@ func close_backpack() -> void:
 	backpack_panel.visible = false
 	if auto_pause_menus:
 		get_tree().paused = false
+
+## 人物属性摘要（商店与背包共用）。
+func player_stats_text() -> String:
+	return "移速 %d\n防御 %d\n血量 %d/%d\n幸运 %d" % [
+		int(player.speed * player.move_speed_mult + player.move_speed_bonus),
+		player.defense,
+		player.hp, player.max_hp,
+		player.luck,
+	]
+
+## 当前攻击方式摘要（背包显示）。
+func attack_info_text(attack_id: String) -> String:
+	if attack_id == "" or attack_id == "pistol":
+		return "当前: 破旧手枪（初始单发子弹）"
+	var tree_id := attack_id
+	var owned_ids: Array = talent_tree.owned_ids(tree_id)
+	var tree_name := "短刃天赋" if tree_id == "blade" else "左轮天赋"
+	return "当前: %s\n已点 %d 个天赋（%s）" % [attack_name(attack_id), owned_ids.size(), tree_name]
 
 # --- 调试面板（测试模式） ---
 
@@ -340,7 +330,7 @@ func set_wave_duration(seconds: float) -> void:
 func debug_give_item(item_id: String) -> void:
 	player.buy_item(item_id)
 	if item_id == "ring":
-		spawner.set_spawn_rate_mult(2.0)  # 咒戒：刷怪效率 ×2
+		spawner.set_spawn_rate_mult(2.0)
 	debug_panel.refresh()
 
 ## 调试：移除道具（减计数并撤销玩家侧效果）。
@@ -348,7 +338,7 @@ func debug_remove_item(item_id: String) -> void:
 	var before: int = player.item_counts.get(item_id, 0)
 	player.remove_item(item_id)
 	if item_id == "ring" and before == 1:
-		spawner.set_spawn_rate_mult(1.0)  # 咒戒减到 0：恢复刷怪效率
+		spawner.set_spawn_rate_mult(1.0)
 	debug_panel.refresh()
 
 ## 调试：把某道具数量直接设为 count。按差额逐次增减，保证玩家侧效果与计数一致。
@@ -366,6 +356,13 @@ func debug_set_item_count(item_id: String, count: int) -> void:
 		if item_id == "ring" and target <= 0:
 			spawner.set_spawn_rate_mult(1.0)
 	debug_panel.refresh()
+
+## 调试：切换当前攻击方式（测试用，纯切换不影响暂停态/点数）。
+func debug_set_attack(attack_id: String) -> void:
+	player.attack_id = attack_id
+	player.weapon_levels[attack_id] = 1
+	talent_tree.attack_id = attack_id
+	weapon_manager.set_active_attack(attack_id)
 
 # --- 暂停菜单 ---
 
@@ -394,15 +391,21 @@ func _on_player_gold_changed(total: int) -> void:
 		shop_panel.refresh()
 
 func _on_player_level_up(_level: int) -> void:
-	# v1.1.0 天赋树停用：升级不再发天赋点、不弹天赋窗（框架保留待后续重做）。
-	pass
+	if not attack_choice_done:
+		# 首次升级：主动弹出攻击方式选择面板（暂停）。
+		if auto_pause_menus:
+			get_tree().paused = true
+		attack_select_panel.visible = true
+	else:
+		# 之后升级：只发 1 点天赋 + 屏幕下方一行文字提示（不弹窗）。
+		talent_tree.points += 1
+		hud.show_talent_hint("获得 1 天赋点，按 T 打开天赋树")
 
 ## 统一结束本局并显示结算界面。reason 用于标题区分（游戏结束 / 本局结束）。
 func end_game(reason: String) -> void:
 	game_state = GameState.GAMEOVER
 	spawner.end_wave()
-	get_tree().paused = false  # 主动结束需先解除暂停，结算按钮才可点
-	# 结束本局：停止整条武器链（主动结束玩家未死亡，否则武器会保留 _firing 继续开火）。
+	get_tree().paused = false
 	var wm := player.get_node_or_null("WeaponManager")
 	if wm != null:
 		wm.call("halt")
@@ -423,7 +426,6 @@ func _on_enemy_killed(global_pos: Vector2, xp_value: int, gold_value: int) -> vo
 	hud.update_kills(kills)
 	spawn_xp_gem(global_pos, xp_value)
 	spawn_coin(global_pos, gold_value)
-	# 红心掉率随幸运值提升：基础 5%，每点幸运 +5%。
 	var heart_chance: float = 0.05 + 0.05 * player.luck
 	if randf() < heart_chance:
 		spawn_heart(global_pos)

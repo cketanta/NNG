@@ -13,6 +13,8 @@ signal hp_changed(current: int, max_hp: int)
 
 const PULL_TRAP_RADIUS := 26.0  # 距黑洞中心低于该距离时，敌人改为在中心翻搅而非叠成一团
 
+const BLEED_DURATION := 5.0  # 流血持续时间（秒）
+
 var hp: int
 var _player: Node2D = null
 var _pull_active := false
@@ -22,10 +24,28 @@ var _pull_phase := 0.0
 var _pull_jitter_radius := 6.0
 var _pull_twitch_time := 0.0
 
+# --- 流血（短刃致残天赋） ---
+var bleed_stacks := 0    # 当前流血层数
+var bleed_max := 30      # 流血上限（郁色创伤 → 50）
+var _bleed_time := 0.0   # 距上次刷新流血的时间
+
 func _ready() -> void:
 	hp = max_hp
 	add_to_group("enemies")
 	_player = get_tree().get_first_node_in_group("player") as Node2D
+
+func _process(delta: float) -> void:
+	# 流血计时：超过 5 秒未再次叠加则清空。
+	if bleed_stacks > 0:
+		_bleed_time += delta
+		if _bleed_time >= BLEED_DURATION:
+			bleed_stacks = 0
+			_bleed_time = 0.0
+
+## 叠加流血（短刃致残命中调用）；刷新持续时间，叠加上限由 bleed_max 限制。
+func add_bleed(amount: int) -> void:
+	bleed_stacks = mini(bleed_stacks + amount, bleed_max)
+	_bleed_time = 0.0
 
 ## 随波次变强（在 add_child 之前调用）。
 func apply_wave_scale(wave: int) -> void:
@@ -55,7 +75,11 @@ func direction_to_player() -> Vector2:
 func take_damage(amount: int) -> void:
 	if hp <= 0:
 		return
-	hp -= amount
+	# 流血：受到攻击时额外受到流血层数点伤害（致残效果）。
+	var total := amount
+	if bleed_stacks > 0:
+		total += bleed_stacks
+	hp -= total
 	hp_changed.emit(hp, max_hp)
 	if hp <= 0:
 		die()

@@ -28,7 +28,7 @@ func _build_ui() -> void:
 		vbox.add_child(btn)
 
 	var test_btn := Button.new()
-	test_btn.text = "测试模式（可调波数/金币/属性/武器/无限道具）"
+	test_btn.text = "测试模式（可调波数/金币/属性/攻击方式/无限道具）"
 	test_btn.pressed.connect(_on_test_mode_pressed)
 	vbox.add_child(test_btn)
 

@@ -17,6 +17,9 @@ const TEX_SPLITTER := preload("res://assets/projectiles/splitter_bullet.svg")
 const TEX_SPLITTER_CHILD := preload("res://assets/projectiles/splitter_child.svg")
 const TEX_BLACK_HOLE := preload("res://assets/projectiles/black_hole_bullet.svg")
 const TEX_ENEMY := preload("res://assets/projectiles/enemy_bullet.svg")
+const TEX_PISTOL := preload("res://assets/projectiles/pistol_bullet.svg")
+const TEX_REVOLVER := preload("res://assets/projectiles/revolver_bullet.svg")
+const TEX_BLADE_AIR := preload("res://assets/projectiles/blade_air_wave.svg")
 
 var _direction := Vector2.RIGHT
 var _speed := 500.0
@@ -28,7 +31,8 @@ var _is_small := false
 var _spawn_black_hole := false
 var _black_hole_radius := 130.0
 var _already_hit := false    # 每颗子弹只命中一只怪、命中即消失（不穿透存活、不累积）
-var _visual_type := "default"  # 子弹贴图类型（staff/splitter/splitter_child/black_hole_gun）
+var _visual_type := "default"  # 子弹贴图类型（staff/pistol/revolver/blade_air/splitter/splitter_child/black_hole_gun）
+var _homing_deg := 0.0      # 追踪强度：每帧最大转向角度（0=不追踪，枪斗术弱/智能制导强）
 
 var _pull_target: Node2D = null
 var _pull_speed := 0.0
@@ -70,6 +74,10 @@ func set_small_child() -> void:
 func set_visual_type(type: String) -> void:
 	_visual_type = type
 
+## 设置追踪强度：每帧朝最近敌人最大转向角度（枪斗术弱 / 智能制导强）。
+func set_homing(deg_per_frame: float) -> void:
+	_homing_deg = maxf(deg_per_frame, 0.0)
+
 ## 黑洞枪：命中敌人在命中点生成黑洞。
 func set_spawn_black_hole(radius: float) -> void:
 	_spawn_black_hole = true
@@ -81,6 +89,8 @@ func apply_pull(center: Node2D, speed: float) -> void:
 	_pull_speed = speed
 
 func _physics_process(delta: float) -> void:
+	if _homing_deg > 0.0 and _friendly:
+		_apply_homing(delta)
 	global_position += _direction * _speed * delta
 	if is_instance_valid(_pull_target):
 		var center := _pull_target.global_position
@@ -112,6 +122,15 @@ func _draw() -> void:
 			size = 16.0
 		"staff":
 			tex = TEX_STAFF
+		"pistol":
+			tex = TEX_PISTOL
+			size = 12.0
+		"revolver":
+			tex = TEX_REVOLVER
+			size = 14.0
+		"blade_air":
+			tex = TEX_BLADE_AIR
+			size = 22.0
 		_:
 			_draw_fallback_ball()
 			return
@@ -159,6 +178,26 @@ func _spawn_black_hole_at(pos: Vector2) -> void:
 	hole.radius = _black_hole_radius
 	get_tree().current_scene.add_child(hole)
 	hole.global_position = pos
+
+## 追踪：朝最近敌人逐步转向（幅度受 _homing_deg 限制）。
+func _apply_homing(delta: float) -> void:
+	var best: Node2D = null
+	var best_dsq := INF
+	for enemy: Node2D in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(enemy):
+			continue
+		var dsq := global_position.distance_squared_to(enemy.global_position)
+		if dsq < best_dsq:
+			best_dsq = dsq
+			best = enemy
+	if best == null:
+		return
+	var to_target := best.global_position - global_position
+	if to_target.length_squared() < 0.001:
+		return
+	var diff := wrapf(to_target.angle() - _direction.angle(), -PI, PI)
+	var max_turn := deg_to_rad(_homing_deg) * delta * 60.0
+	_direction = _direction.rotated(clampf(diff, -max_turn, max_turn))
 
 ## 玩家受击盒与敌方弹重叠时调用。
 func get_damage_value() -> int:

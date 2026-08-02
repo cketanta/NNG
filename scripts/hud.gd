@@ -10,6 +10,7 @@ extends CanvasLayer
 @onready var xp_label: Label = $XPLabel
 @onready var gold_label: Label = $GoldLabel
 @onready var mode_label: Label = $ModeLabel
+@onready var talent_hint: Label = $TalentHint
 @onready var game_over_panel: ColorRect = $GameOverPanel
 @onready var game_over_title: Label = $GameOverPanel/CenterBox/GameOverTitle
 @onready var game_over_time_label: Label = $GameOverPanel/CenterBox/GameOverTime
@@ -63,6 +64,18 @@ func update_gold(gold: int) -> void:
 
 func set_attack_mode(mode: int) -> void:
 	mode_label.text = "模式: 自动 (Tab)" if mode == 0 else "模式: 手动 (Tab)"
+
+var _hint_tween: Tween
+
+## 屏幕下方一行文字提示（升级发点等），显示 3 秒后淡出。
+func show_talent_hint(text: String) -> void:
+	talent_hint.text = text
+	talent_hint.visible = true
+	if _hint_tween != null and _hint_tween.is_valid():
+		_hint_tween.kill()
+	_hint_tween = create_tween()
+	_hint_tween.tween_interval(3.0)
+	_hint_tween.tween_callback(func() -> void: talent_hint.visible = false)
 
 ## 结算界面：title 区分「游戏结束 / 本局结束」，展示本局统计。
 func show_result(title: String, difficulty: String, kills: int, wave: int, level: int, gold: int, survived: float) -> void:

@@ -1,6 +1,5 @@
 extends SceneTree
-## 背包测试（v1.1.0）：打开暂停；显示人物属性/已拥有武器/道具（×数量）；
-## 不含天赋树；关闭恢复。
+## 背包测试：打开暂停；显示金币 / 人物属性 / 攻击方式（+已点天赋概览） / 道具；关闭恢复。
 
 var _frames := 0
 var _failures: Array[String] = []
@@ -17,9 +16,9 @@ func _initialize() -> void:
 func _process(_delta: float) -> bool:
 	_frames += 1
 	if _frames == 1:
-		_main.start_with_weapon("whip")
+		_main.start_with_weapon("pistol")
 		_player.gain_gold(50)
-		_main.buy_item("shoes")  # 买一个道具用于显示
+		_main.buy_item("shoes")  # 道具框架保留，背包道具区应显示
 		_main.open_backpack()
 	elif _frames == 5:
 		if paused:
@@ -40,20 +39,18 @@ func _process(_delta: float) -> bool:
 			print("[OK] backpack shows player stats")
 		else:
 			_failures.append("stats label '%s'" % backpack._stats_label.text)
-		var whip_row: Dictionary = backpack._weapon_rows["whip"]
-		if "Lv.1" in whip_row["name"].text and "段连斩" in whip_row["effect"].text:
-			print("[OK] backpack lists owned weapons")
+		# 攻击方式区：未选攻击方式时显示当前手枪 + 提示。
+		var attack_text := _gather_text(backpack._attack_container)
+		if "破旧手枪" in attack_text and "首次升级" in attack_text:
+			print("[OK] backpack shows current attack + hint")
 		else:
-			_failures.append("weapons row '%s / %s'" % [whip_row["name"].text, whip_row["effect"].text])
+			_failures.append("attack area text '%s'" % attack_text)
+		# 道具区：显示已购道具 ×数量。
 		var items_text := _gather_text(backpack._items_box)
 		if "跑鞋" in items_text and "×1" in items_text:
 			print("[OK] backpack lists item with count")
 		else:
 			_failures.append("items text '%s'" % items_text)
-		if backpack.get("_tree_ui") == null:
-			print("[OK] no talent tree in backpack")
-		else:
-			_failures.append("talent tree still in backpack")
 		_main.close_backpack()
 	elif _frames == 10:
 		if not paused and not _main.get_node("HUD/BackpackPanel").visible:
@@ -64,7 +61,7 @@ func _process(_delta: float) -> bool:
 		return true
 	return false
 
-## 递归收集某容器内所有 Label 文本，用于断言卡片化的道具区内容。
+## 递归收集某容器内所有 Label 文本，用于断言卡片化的区内容。
 func _gather_text(node: Node) -> String:
 	var out := ""
 	if node is Label:

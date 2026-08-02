@@ -8,7 +8,7 @@
 [ext_resource type="Script" uid="uid://dqot34vk3uyno" path="res://scripts/ui/talent_panel.gd" id="6_talent"]
 [ext_resource type="Script" uid="uid://b7qujf25fy0la" path="res://scripts/ui/backpack_panel.gd" id="7_backpack"]
 [ext_resource type="Theme" uid="uid://bnelm40j7jpi0" path="res://themes/cjk_theme.tres" id="8_theme"]
-[ext_resource type="Script" uid="uid://dvajhqus8ettj" path="res://scripts/ui/start_panel.gd" id="9_start"]
+[ext_resource type="Script" path="res://scripts/ui/attack_select_panel.gd" id="13_attack_select"]
 [ext_resource type="Script" uid="uid://jyhto8uafimi" path="res://scripts/ui/difficulty_panel.gd" id="10_difficulty"]
 [ext_resource type="Script" uid="uid://dl4pnjklfeomm" path="res://scripts/ui/pause_panel.gd" id="11_pause"]
 [ext_resource type="Script" uid="uid://inbv73ogdq2p" path="res://scripts/ui/debug_panel.gd" id="12_debug"]
@@ -105,15 +105,37 @@ text = "模式: 自动 (Tab)"
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -360.0
+offset_left = -440.0
 offset_top = 16.0
 offset_right = -16.0
 offset_bottom = 40.0
 grow_horizontal = 0
 theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
 theme_override_fonts/font = SubResource("SystemFont_cjk")
-text = "WASD 移动 | Tab 模式 | B 背包 | Esc 菜单"
+text = "WASD 移动 | Tab 模式 | T 天赋 | B 背包 | Esc 菜单"
 horizontal_alignment = 2
+
+[node name="TalentHint" type="Label" parent="HUD"]
+visible = false
+anchors_preset = 7
+anchor_left = 0.5
+anchor_top = 1.0
+anchor_right = 0.5
+anchor_bottom = 1.0
+offset_left = -400.0
+offset_top = -88.0
+offset_right = 400.0
+offset_bottom = -56.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_colors/font_color = Color(0.6, 1.0, 0.6, 1)
+theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
+theme_override_constants/shadow_offset_x = 1
+theme_override_constants/shadow_offset_y = 1
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 18
+text = ""
+horizontal_alignment = 1
 
 [node name="GameOverPanel" type="ColorRect" parent="HUD" unique_id=1323484143]
 process_mode = 3
@@ -233,7 +255,7 @@ grow_vertical = 2
 theme = ExtResource("8_theme")
 script = ExtResource("7_backpack")
 
-[node name="StartPanel" type="CenterContainer" parent="HUD" unique_id=1617320946]
+[node name="AttackSelectPanel" type="CenterContainer" parent="HUD"]
 process_mode = 3
 visible = false
 anchors_preset = 15
@@ -242,7 +264,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("8_theme")
-script = ExtResource("9_start")
+script = ExtResource("13_attack_select")
 
 [node name="DifficultyPanel" type="CenterContainer" parent="HUD" unique_id=551972408]
 process_mode = 3

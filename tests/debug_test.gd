@@ -23,11 +23,11 @@ func _process(_delta: float) -> bool:
 			print("[OK] test mode enabled")
 		else:
 			_failures.append("test_mode not set")
-		if not _main.get_node("HUD/DifficultyPanel").visible and _main.get_node("HUD/StartPanel").visible:
-			print("[OK] test mode goes to weapon panel")
+		if not _main.get_node("HUD/DifficultyPanel").visible and not paused and _main.get("game_state") == 1:
+			print("[OK] test mode goes straight to combat")
 		else:
-			_failures.append("test mode did not open weapon panel")
-		_main.start_with_weapon("whip")
+			_failures.append("test mode did not start combat")
+		_main.start_with_weapon("pistol")
 	elif _frames == 2:
 		# 非测试模式下 L 应无效。
 		_main.set("test_mode", false)
@@ -78,11 +78,16 @@ func _process(_delta: float) -> bool:
 			print("[OK] attribute setters applied")
 		else:
 			_failures.append("attribute setters failed")
-		_player.set_weapon_level("whip", 5)
-		if _player.get("weapon_levels")["whip"] == 5:
-			print("[OK] weapon level set to 5")
+		_main.debug_set_attack("blade")
+		if _main.get_node("Player/WeaponManager").get("active_attack_id") == "blade":
+			print("[OK] debug switch attack to blade")
 		else:
-			_failures.append("weapon level not set")
+			_failures.append("debug attack switch to blade failed")
+		_main.debug_set_attack("revolver")
+		if _main.get_node("Player/WeaponManager").get("active_attack_id") == "revolver":
+			print("[OK] debug switch attack to revolver")
+		else:
+			_failures.append("debug attack switch to revolver failed")
 	elif _frames == 6:
 		# 无限道具：不扣钱。
 		var gold_before: int = _player.get("gold")

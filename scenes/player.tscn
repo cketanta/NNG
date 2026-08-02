@@ -1,11 +1,10 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=8 format=3]
 
 [ext_resource type="Script" path="res://scripts/player.gd" id="1_player"]
 [ext_resource type="Script" path="res://scripts/weapons/weapon_manager.gd" id="2_weapon_manager"]
-[ext_resource type="PackedScene" path="res://scenes/weapons/whip.tscn" id="3_whip"]
-[ext_resource type="PackedScene" path="res://scenes/weapons/staff.tscn" id="4_staff"]
-[ext_resource type="PackedScene" path="res://scenes/weapons/splitter.tscn" id="5_splitter"]
-[ext_resource type="PackedScene" path="res://scenes/weapons/black_hole_gun.tscn" id="6_black_hole_gun"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/pistol.tscn" id="3_pistol"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/blade.tscn" id="4_blade"]
+[ext_resource type="PackedScene" path="res://scenes/weapons/revolver.tscn" id="5_revolver"]
 
 [sub_resource type="CircleShape2D" id="CircleShape2D_body"]
 radius = 14.0
@@ -31,13 +30,11 @@ shape = SubResource("CircleShape2D_hurtbox")
 [node name="WeaponManager" type="Node2D" parent="."]
 script = ExtResource("2_weapon_manager")
 
-[node name="Whip" parent="WeaponManager" instance=ExtResource("3_whip")]
+[node name="Pistol" parent="WeaponManager" instance=ExtResource("3_pistol")]
 
-[node name="Staff" parent="WeaponManager" instance=ExtResource("4_staff")]
+[node name="Blade" parent="WeaponManager" instance=ExtResource("4_blade")]
 
-[node name="Splitter" parent="WeaponManager" instance=ExtResource("5_splitter")]
-
-[node name="BlackHoleGun" parent="WeaponManager" instance=ExtResource("6_black_hole_gun")]
+[node name="Revolver" parent="WeaponManager" instance=ExtResource("5_revolver")]
 
 [node name="Camera2D" type="Camera2D" parent="."]
 current = true

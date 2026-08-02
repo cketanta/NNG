@@ -14,6 +14,40 @@
 
 ---
 
+## v1.2.0
+
+**日期**：2026-08-02
+**状态**：武器与天赋系统重做：单一攻击方式（初始破旧手枪，首次升级二选一短刃/左轮）+ 围绕攻击方式的树状天赋（三选一加点、T 键面板）+ 空商店（道具系统暂停使用）+ 分裂者/黑洞枪游戏内移除。
+
+**包含内容**：
+- 攻击方式系统：玩家只持有一把攻击方式，发射中心 = 玩家自身；初始「破旧手枪」（单发子弹），首次升级二选一「短刃」（近战挥砍）/「左轮手枪」（远程高伤）；旧多武器环绕旋转停用（WeaponManager 框架保留，改单攻击控制）
+- 首次升级主动弹出「选择攻击方式」（短刃/左轮二选一），选中后固定；之后升级只发 1 天赋点 + 屏幕下方一行文字提示（不弹窗），T 键随时打开天赋树面板加点
+- 天赋树重做（`talent_tree.gd`）：两棵树（短刃 23 天赋 / 左轮 15 天赋），每天赋支持前置（prereq）与互斥（conflict，气刃斩↔狂战）；「可选集合」+ 每次加点从可选天赋抽 3 选 1
+- 短刃天赋：范围扩大 / 利刃出鞘 / 拔刀术 线性分支；气刃斩 + 气刃专精 + 气刃大回旋（环形波 2× 伤害）；狂战（移速+30%/伤害+20%/攻速+20%/体型+50%）；双/三/四刀流；致残（流血叠 30 层，郁色创伤 → 50 层，受击额外流血层数伤害）
+- 左轮天赋：弹头改良 / 弹匣扩容 / 快枪手 线性分支；转盘枪手（右键特殊攻击：扔出手枪到右键位置旋转攻击一周，子弹密度由攻速决定，期间无法主动攻击）；枪斗术（微弱追踪）/ 智能制导（追踪增强）
+- 商店改为空商店：删除武器升级区与道具出售（道具系统暂停使用，`ItemDefs`/`buy_item` 框架保留）；只显示金币/玩家状态 + 「开始下一波」
+- 背包改为 属性 / 攻击方式（含已点天赋概览）/ 道具 三列
+- 分裂者、黑洞枪游戏内移除（脚本与贴图保留框架）
+- 新增 input：`toggle_talent`（T）、`special_attack`（鼠标右键）
+- 新贴图：`pistol.svg / blade.svg / revolver.svg` + `pistol_bullet / revolver_bullet / blade_air_wave` 子弹
+
+**关键文件**（回退时对照）：
+- `scripts/attacks/pistol.gd|blade.gd|revolver.gd|spinner.gd`（新增）：攻击方式实现
+- `scripts/systems/talent_tree.gd`（重写）：两棵树 + 前置/冲突/抽三
+- `scripts/ui/talent_panel.gd`（重写，树概览+三选一）、`scripts/ui/attack_select_panel.gd`（新增）
+- `scripts/weapons/weapon_manager.gd`：多武环绕 → 单攻击控制（保留瞄准/halt）
+- `scripts/main.gd`：攻击方式选择/升级发点/天赋/空商店流程
+- `scripts/player.gd`：天赋树注入、体型倍率、移速倍率
+- `scripts/enemies/enemy_base.gd`：流血系统（`add_bleed`）
+- `scripts/weapons/projectile.gd`：子弹追踪 + 新视觉类型
+- `scripts/ui/shop_panel.gd|backpack_panel.gd`（重做）、`scripts/hud.gd`（天赋提示行）
+- `scenes/player.tscn|main.tscn`、`scenes/weapons/pistol|blade|revolver.tscn`（新增）
+- `project.godot`：T / 右键 action
+
+**导出**：`exports/v1.2.0/NNG_Ver1.2.0.exe`（单文件，`embed_pck=true`）+ `readme.txt`（操作介绍 + 各版本更新摘要）。
+
+**备注**：15 个无头测试全过（新增 `blade_test`/`revolver_test`；重写 `talent/shop/start/backpack/weapons/debug_test`；适配 `smoke/combat/difficulty`；`item_test` 移除已删武器公式断言；`hang_probe` 保留）。**遗留**：`start_panel.gd`、`talent_tree_ui.gd` 因系统重做成为未引用孤儿脚本（保留未删，如需删除另说）。
+
 ## v1.1.2
 
 **日期**：2026-08-01

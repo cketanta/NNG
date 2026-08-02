@@ -1,14 +1,12 @@
 class_name BackpackPanel
 extends CenterContainer
-## 背包（B 键，游戏暂停）：人物属性 + 已拥有武器（含属性） + 已拥有道具（含总加成）。
-## 布局：横向三列（玩家属性｜武器｜道具），整体包在 ScrollContainer 里，超高时纵向滚动。
-## 天赋树已停用，不再内嵌天赋树控件。
+## 背包（B 键，游戏暂停）：人物属性 + 攻击方式（含已点天赋概览） + 已拥有道具。
+## 布局：横向三列（玩家属性｜攻击方式｜道具），整体包在 ScrollContainer 里，超高时纵向滚动。
 
 var _main: Main
 var _gold_label: Label
 var _stats_label: Label
-var _weapon_rows: Dictionary = {}  # 武器 id -> { name, effect, attr }（仅已获得武器）
-var _weapons_container: VBoxContainer  # 武器列（动态重建，未获得武器不显示）
+var _attack_container: VBoxContainer  # 攻击方式列（动态重建）
 var _items_box: VBoxContainer  # 已拥有道具（每道具一张卡片）
 
 func setup(main: Main) -> void:
@@ -16,7 +14,6 @@ func setup(main: Main) -> void:
 	_build_ui()
 
 func _build_ui() -> void:
-	# 整体包滚动容器：高度固定，内容超高时出现纵向滑动条。
 	var scroll := ScrollContainer.new()
 	scroll.custom_minimum_size = Vector2(840, 420)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
@@ -32,11 +29,10 @@ func _build_ui() -> void:
 	_gold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	vbox.add_child(_gold_label)
 
-	# 主体：横向三列。
 	var body := HBoxContainer.new()
 	vbox.add_child(body)
 	body.add_child(_make_stats_box())    # 左：玩家属性
-	body.add_child(_make_weapons_box())  # 中：武器
+	body.add_child(_make_attack_box())   # 中：攻击方式
 	body.add_child(_make_items_box())    # 右：道具
 
 	var close := Button.new()
@@ -56,20 +52,20 @@ func _make_stats_box() -> Control:
 	v.add_child(_stats_label)
 	return box
 
-func _make_weapons_box() -> Control:
+func _make_attack_box() -> Control:
 	var box := PanelContainer.new()
-	box.custom_minimum_size = Vector2(300, 0)
-	box.add_theme_stylebox_override("panel", UiStyle.section(1))  # 武器：绿
+	box.custom_minimum_size = Vector2(320, 0)
+	box.add_theme_stylebox_override("panel", UiStyle.section(1))  # 攻击方式：绿
 	var v := VBoxContainer.new()
 	box.add_child(v)
-	v.add_child(_make_section_title("武器"))
-	_weapons_container = VBoxContainer.new()
-	v.add_child(_weapons_container)
+	v.add_child(_make_section_title("攻击方式"))
+	_attack_container = VBoxContainer.new()
+	v.add_child(_attack_container)
 	return box
 
 func _make_items_box() -> Control:
 	var box := PanelContainer.new()
-	box.custom_minimum_size = Vector2(340, 0)
+	box.custom_minimum_size = Vector2(330, 0)
 	box.add_theme_stylebox_override("panel", UiStyle.section(2))  # 道具：橙
 	var v := VBoxContainer.new()
 	box.add_child(v)
@@ -81,40 +77,28 @@ func _make_items_box() -> Control:
 func refresh() -> void:
 	_gold_label.text = "金币: %d" % _main.player.gold
 	_stats_label.text = _main.player_stats_text()
-	_rebuild_weapons()
+	_rebuild_attack()
 	_rebuild_items()
 
-## 武器列：只显示已获得的武器（level>=1），未获得武器不占行。
-func _rebuild_weapons() -> void:
-	for child in _weapons_container.get_children():
+## 攻击方式列：显示当前攻击方式 + 已点天赋概览 + 加天赋提示。
+func _rebuild_attack() -> void:
+	for child in _attack_container.get_children():
 		child.queue_free()
-	_weapon_rows.clear()
-	var owned_count := 0
-	for weapon_id in _main.weapon_ids():
-		var level: int = _main.player.weapon_levels.get(weapon_id, 0)
-		if level < 1:
-			continue
-		owned_count += 1
-		var name_label := Label.new()
-		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_weapons_container.add_child(name_label)
-		var effect_label := Label.new()
-		effect_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_weapons_container.add_child(effect_label)
-		var attr_label := Label.new()
-		attr_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_weapons_container.add_child(attr_label)
-		_weapon_rows[weapon_id] = { "name": name_label, "effect": effect_label, "attr": attr_label }
-		name_label.text = "%s  Lv.%d" % [_main.weapon_name(weapon_id), level]
-		effect_label.text = _main.weapon_effect_text(weapon_id, level)
-		attr_label.text = _main.weapon_attr_text(weapon_id)
-	if owned_count == 0:
-		var none := Label.new()
-		none.text = "暂无武器"
-		none.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		_weapons_container.add_child(none)
+	var attack_id: String = _main.player.attack_id
+	_attack_container.add_child(UiStyle.card_label(_main.attack_info_text(attack_id)))
+	if attack_id == "" or attack_id == "pistol":
+		_attack_container.add_child(UiStyle.card_label("首次升级后选择攻击方式"))
+		return
+	var owned_ids: Array = _main.talent_tree.owned_ids(attack_id)
+	if owned_ids.is_empty():
+		_attack_container.add_child(UiStyle.card_label("尚未点亮天赋（按 T 打开天赋树）"))
+	else:
+		for talent_id in owned_ids:
+			var t: Dictionary = _main.talent_tree.def(attack_id, talent_id)
+			_attack_container.add_child(UiStyle.card_label("✓ " + t.name, Color(0.6, 1.0, 0.6)))
+	_attack_container.add_child(UiStyle.card_label("按 T 打开天赋树加点"))
 
-## 已拥有道具：每个道具一张卡片（名称×数量 + 效果 + 总加成），上下堆叠以卡片边框区分。
+## 已拥有道具：每个道具一张卡片（道具系统暂停使用，仅展示框架保留）。
 func _rebuild_items() -> void:
 	for child in _items_box.get_children():
 		child.queue_free()
