@@ -1,3 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 14 14">
-  <circle cx="7" cy="7" r="6" fill="#ff7a45"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 左轮弹：橙红渐变弹头 + 尾焰 -->
+  <defs>
+    <radialGradient id="b" cx="0.4" cy="0.4" r="0.6">
+      <stop offset="0" stop-color="#ffe0b0"/>
+      <stop offset="0.5" stop-color="#ff9a5a"/>
+      <stop offset="1" stop-color="#d84a20"/>
+    </radialGradient>
+  </defs>
+  <path d="M 28 18 Q 44 24 28 30 L 12 26 Q 8 24 12 22 Z" fill="url(#b)" stroke="#8a2a0a" stroke-width="1.5"/>
+  <path d="M 10 24 L 3 21 L 5 27 Z" fill="#ff7a45" opacity="0.7"/>
+  <circle cx="22" cy="24" r="4" fill="#fff0d0" opacity="0.9"/>
 </svg>

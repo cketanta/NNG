@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 跑鞋：灰鞋 + 白鞋带 -->
+  <defs><linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c0c8d4"/><stop offset="1" stop-color="#5a6474"/></linearGradient></defs>
+  <path d="M 10 30 Q 8 18 20 16 L 32 16 Q 40 18 40 26 L 40 34 L 10 34 Z" fill="url(#b)" stroke="#2a3038" stroke-width="2"/>
+  <path d="M 14 24 L 34 24" stroke="#f0f4fa" stroke-width="2.5"/>
+  <path d="M 14 20 L 34 20" stroke="#f0f4fa" stroke-width="2.5"/>
+  <rect x="12" y="34" width="10" height="4" rx="1" fill="#2a3038"/>
+  <rect x="28" y="34" width="10" height="4" rx="1" fill="#2a3038"/>
+</svg>

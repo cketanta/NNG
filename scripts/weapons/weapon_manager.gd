@@ -15,6 +15,11 @@ const WEAPON_SCENES := {
 	"pistol": preload("res://scenes/weapons/pistol.tscn"),
 	"blade": preload("res://scenes/weapons/blade.tscn"),
 	"revolver": preload("res://scenes/weapons/revolver.tscn"),
+	"whip": preload("res://scenes/weapons/whip.tscn"),
+	"staff": preload("res://scenes/weapons/staff.tscn"),
+	"splitter": preload("res://scenes/weapons/splitter.tscn"),
+	"black_hole_gun": preload("res://scenes/weapons/black_hole_gun.tscn"),
+	"boomerang": preload("res://scenes/weapons/boomerang.tscn"),
 }
 
 var _weapons: Array[Node2D] = []

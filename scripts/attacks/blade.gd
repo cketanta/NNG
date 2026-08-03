@@ -43,6 +43,9 @@ var _air_blade_count := 0  # 弧形气刃数量（气刃斩 + 气刃专精1~4）
 var _grand_slash := false  # 气刃大回旋：额外环形气刃波
 var _bleed_on_hit := false # 致残：命中附加流血
 var _bleed_max := 0        # 流血上限（致残 30 / 郁色创伤 50；0 表示不触发流血）
+var _crit_chance := 0.0    # 暴击率（%，人物锐眼）
+var _crit_dmg := 0.0       # 暴击额外伤害（%，人物致命一击）
+var _lifesteal := 0.0      # 吸血比例（%，人物血之渴望）
 
 func set_aim_direction(dir: Vector2) -> void:
 	_aim_dir = dir.normalized()
@@ -97,66 +100,45 @@ func _player() -> Node2D:
 func set_talent_tree(tree: TalentTree) -> void:
 	talent_tree = tree
 
-## 从本武器天赋树 + 人物天赋重算终值（每帧调用，量小可接受）。
+## 从本武器天赋树 + 人物天赋 + 道具重算终值（每帧调用，量小可接受）。
 func _apply_talents() -> void:
 	var tree: TalentTree = talent_tree if talent_tree != null else TalentTree.new()
-	var owned_ids: Array = tree.owned_ids("blade")
-	var range_mult := 1.0
-	var dmg_mult := 1.0
-	var cd_mult := 1.0
+	var agg: Dictionary = tree.aggregate("blade")
+	var person: Dictionary = _player().player_talent.effects()
+	var item: Dictionary = _player().weapon_item_effects(true)
+	# 倍率 = 武器树 × 人物树 × 道具（近战组）。
+	var range_mult: float = agg.range_mult * person.range_mult * item.range_mult
+	var dmg_mult: float = agg.dmg_mult * person.dmg_mult * item.dmg_mult
+	var cd_mult: float = agg.cd_mult * person.cd_mult * item.cd_mult
 	_combo_count = 1
 	_air_blade_count = 0
 	_grand_slash = false
 	_bleed_on_hit = false
 	_bleed_max = 0
-	# 范围扩大1~4：×1.1 · ×1.2 · ×1.2 · ×1.2（累计）
-	if "blade_range_1" in owned_ids: range_mult *= 1.1
-	if "blade_range_2" in owned_ids: range_mult *= 1.2
-	if "blade_range_3" in owned_ids: range_mult *= 1.2
-	if "blade_range_4" in owned_ids: range_mult *= 1.2
-	# 利刃出鞘1~4：每级 +10% 攻击
-	dmg_mult *= 1.0 + 0.1 * _count_owned(owned_ids, "blade_sharp_")
-	# 拔刀术1~3：每级攻速 +10%（冷却 ×0.9）
-	cd_mult *= pow(0.9, _count_owned(owned_ids, "blade_swift_"))
-	# 气刃斩本身 +1；气刃专精1~4 每项再 +1（注意 blade_air_blade 不能按前缀计入专精）。
-	_air_blade_count += 1 if "blade_air_blade" in owned_ids else 0
-	for i in range(1, 5):
-		if "blade_air_%d" % i in owned_ids:
-			_air_blade_count += 1
-	# 气刃大回旋
-	_grand_slash = "blade_grand_slash" in owned_ids
-	# 狂战：挥砍伤害+20%、攻速+20%、移速+30%、体型+50%（与气刃斩互斥，已由可选集合保证）
-	if "blade_berserk" in owned_ids:
-		dmg_mult *= 1.2
-		cd_mult *= 0.8
-		_player().move_speed_mult = 1.3
-		_player().body_scale = 1.5
-	else:
-		_player().move_speed_mult = 1.0
-		_player().body_scale = 1.0
-	# 多刀流：双/三/四刀流覆盖挥砍次数
-	if "blade_dual" in owned_ids: _combo_count = 2
-	if "blade_triple" in owned_ids: _combo_count = 3
-	if "blade_quad" in owned_ids: _combo_count = 4
-	# 致残：命中附加流血（上限 30）；郁色创伤：上限 50
-	if "blade_maim" in owned_ids:
+	# 人物暴击/吸血（作用于挥砍与气刃）。
+	_crit_chance = person.crit_chance
+	_crit_dmg = person.crit_dmg
+	_lifesteal = person.lifesteal
+	# 气刃斩本身 +1；气刃专精1~4 每项再 +1（聚合 counts）。
+	_air_blade_count = int(agg.counts.get("air_blade", 0))
+	# 气刃大回旋。
+	_grand_slash = bool(agg.flags.get("grand_slash", false))
+	# 狂战：伤害+20%、攻速+20%、移速+30%、体型+50%（与气刃斩互斥，已由可选集合保证）。
+	# 移速/体型上报到玩家（多把武器取最大），不再覆盖人物移速倍率。
+	if bool(agg.flags.get("berserk", false)):
+		_player().apply_weapon_speed_mult(agg.speed_mult)
+		_player().apply_weapon_body_scale(1.5)
+	# 多刀流：双/三/四刀流（flag 取最高级覆盖挥砍次数）。
+	if bool(agg.flags.get("combo_4", false)): _combo_count = 4
+	elif bool(agg.flags.get("combo_3", false)): _combo_count = 3
+	elif bool(agg.flags.get("combo_2", false)): _combo_count = 2
+	# 致残：命中附加流血（上限 30）；郁色创伤：上限再 +20 → 50。
+	if bool(agg.flags.get("bleed", false)):
 		_bleed_on_hit = true
-		_bleed_max = 30
-	if "blade_grief" in owned_ids:
-		_bleed_max = 50
-	# 人物天赋（迅捷攻速 / 延伸范围 / 狂力伤害）叠加。
-	var pt: PlayerTalent = _player().player_talent
-	damage = maxi(1, int(round(base_damage * dmg_mult * pow(1.1, pt.owned_count("damage")))))
-	cooldown = base_cooldown * cd_mult * pow(0.92, pt.owned_count("attack_speed"))
-	melee_range = base_range * range_mult * pow(1.12, pt.owned_count("attack_range"))
-
-## 统计已拥有天赋中 id 以 prefix 开头（且是 1~N 编号）的数量。
-func _count_owned(owned_ids: Array, prefix: String) -> int:
-	var count := 0
-	for id in owned_ids:
-		if id.begins_with(prefix):
-			count += 1
-	return count
+		_bleed_max = int(agg.counts.get("bleed_max", 0))
+	damage = maxi(1, int(round((base_damage + item.dmg_flat) * dmg_mult)))
+	cooldown = base_cooldown * cd_mult
+	melee_range = base_range * range_mult
 
 ## 发射一次攻击的弧形气刃：气刃斩在挥砍扇角内均匀分布；气刃大回旋额外沿整圈发射。
 func _launch_air_blades() -> void:
@@ -183,6 +165,8 @@ func _fire_air_blade(dir: Vector2, dmg: int) -> void:
 	var blade := PROJECTILE_SCENE.instantiate()
 	blade.setup(dir, projectile_speed, dmg, true)
 	blade.set_visual_type("blade_air")
+	blade.set_crit(_crit_chance, _crit_dmg)
+	blade.set_lifesteal(_lifesteal)
 	blade.global_position = global_position  # 从玩家中心发射
 	get_tree().current_scene.add_child(blade)
 
@@ -215,7 +199,22 @@ func _spawn_swing() -> void:
 
 func _on_zone_body_entered(body: Node2D, dmg: int) -> void:
 	if body.has_method("take_damage"):
-		body.take_damage(dmg)
+		# 暴击：命中时按暴击率 roll，命中则按暴击伤害倍率加成。
+		var crit_hit := false
+		if _crit_chance > 0.0 and randf() * 100.0 < _crit_chance:
+			crit_hit = true
+		var real_dmg := dmg
+		if crit_hit:
+			real_dmg = maxi(1, int(round(dmg * (1.0 + _crit_dmg / 100.0))))
+		# 特效：命中爆闪 + 伤害数字；暴击屏幕震动。
+		Fx.hit(body.global_position, get_tree(), crit_hit)
+		Fx.number(body.global_position, get_tree(), str(real_dmg), crit_hit)
+		if crit_hit:
+			Fx.shake(get_tree(), 5.0)
+		body.take_damage(real_dmg)
+		# 吸血：命中回复一定比例血量。
+		if _lifesteal > 0.0:
+			_player().heal(maxi(1, int(round(real_dmg * _lifesteal / 100.0))))
 		if _bleed_on_hit and body.has_method("add_bleed"):
 			body.add_bleed(1)  # 致残：命中叠加流血
 

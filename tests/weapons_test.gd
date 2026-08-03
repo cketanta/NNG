@@ -20,10 +20,15 @@ func _process(_delta: float) -> bool:
 		_main.start_with_weapon("pistol")
 		_main.debug_give_weapon("blade")
 		_main.debug_give_weapon("revolver")
+		_main.debug_give_weapon("whip")
+		_main.debug_give_weapon("staff")
+		_main.debug_give_weapon("splitter")
+		_main.debug_give_weapon("black_hole_gun")
+		_main.debug_give_weapon("boomerang")
 	elif _frames == 3:
 		var wm: Node = _main.get_node("Player/WeaponManager")
-		if wm.get_child_count() == 3:
-			print("[OK] 3 weapon nodes spawned from slots")
+		if wm.get_child_count() == 8:
+			print("[OK] all 8 weapon nodes spawned from slots")
 		else:
 			_failures.append("weapon nodes=%d" % wm.get_child_count())
 		# 环绕布局：所有武器距玩家中心约 34px（圆周）。
@@ -39,7 +44,7 @@ func _process(_delta: float) -> bool:
 		var trees := {}
 		for child in wm.get_children():
 			trees[child.get("talent_tree")] = true
-		if trees.size() == 3:
+		if trees.size() == 8:
 			print("[OK] each weapon has independent talent tree")
 		else:
 			_failures.append("distinct trees=%d" % trees.size())

@@ -26,17 +26,29 @@ const MAX_WEAPON_SLOTS := 8
 var weapon_slots: Array[Dictionary] = []  # 每项 { id, level, tree }；tree = 该武器独立天赋树
 
 # --- 战斗属性 ---
-var player_talent := PlayerTalent.new()  # 人物天赋（经验升级发点）
+var player_talent := PlayerTalent.new()  # 人物天赋（树状，经验升级发点）
 var move_speed_mult := 1.0   # 移速倍率（人物天赋疾跑）
-var body_scale := 1.0        # 体型倍率（短刃狂战武器天赋）
+var body_scale := 1.0        # 体型倍率（基础，默认为 1）
+# 武器天赋带来的每帧倍率（多把武器取最大，由攻击节点上报、玩家每物理帧重置）。
+var weapon_speed_mult := 1.0
+var weapon_body_scale := 1.0
+# 人物天赋效果缓存（由 apply_personal_talents 更新）。
+var dodge_chance := 0.0          # 闪避概率（0~100，闪避天赋）
+var _person_max_hp_bonus := 0    # 人物天赋提供的生命上限加值
+var _person_defense_bonus := 0   # 人物天赋提供的防御加值
+var _regen_per_sec := 0          # 每秒回复血量（再生天赋）
+var _regen_timer := 0.0
 
 # --- 道具与人物属性（道具驱动，见 buy_item） ---
 var item_counts: Dictionary = {}   # 道具 id -> 已获得数量
-var defense := 0                   # 防御力（劣质盔甲累计，每点减 1 伤害）
+var defense := 0                   # 防御力（盔甲/人物天赋累计，每点减 1 伤害）
 var luck := 0                      # 幸运值（幸运草累计，提高红心掉率）
 var move_speed_bonus := 0          # 移速加算（跑鞋累计，基础 240）
 
 @onready var hurtbox: Area2D = $Hurtbox
+
+var _camera: Camera2D = null  # 屏幕震动用（懒获取）
+var _shake_amount := 0.0
 
 func _ready() -> void:
 	hp = max_hp
@@ -49,12 +61,36 @@ func _ready() -> void:
 	hurtbox.body_exited.connect(_on_hurtbox_body_exited)
 	hurtbox.area_entered.connect(_on_hurtbox_area_entered)
 
-func _physics_process(_delta: float) -> void:
+func _physics_process(delta: float) -> void:
+	# 每物理帧重置武器天赋倍率，由攻击节点在本帧内取最大上报。
+	weapon_speed_mult = 1.0
+	weapon_body_scale = 1.0
+	# 再生：每秒回复（人物再生天赋）。
+	if _regen_per_sec > 0 and hp < max_hp:
+		_regen_timer += delta
+		if _regen_timer >= 1.0:
+			_regen_timer = 0.0
+			heal(_regen_per_sec)
 	var input_dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
-	# 移速 =（基础速度 × 移速倍率）+ 跑鞋加算。
-	velocity = input_dir * (speed * move_speed_mult + move_speed_bonus)
+	# 移速 =（基础速度 × 人物移速倍率 × 武器移速倍率）+ 跑鞋加算。
+	velocity = input_dir * (speed * move_speed_mult * weapon_speed_mult + move_speed_bonus)
 	move_and_slide()
 	_apply_contact_damage()
+
+## 屏幕震动：暴击/敌人死亡时调用，camera offset 随机衰减。
+func shake(amount: float) -> void:
+	if _camera == null:
+		_camera = get_node_or_null("Camera2D") as Camera2D
+	if _camera == null:
+		return
+	_shake_amount = maxf(_shake_amount, amount)
+
+func _process(delta: float) -> void:
+	if _shake_amount > 0.0 and _camera != null:
+		_camera.offset = Vector2(randf_range(-1.0, 1.0), randf_range(-1.0, 1.0)) * _shake_amount
+		_shake_amount = maxf(_shake_amount - delta * 40.0, 0.0)
+	elif _camera != null:
+		_camera.offset = Vector2.ZERO
 
 # --- 成长辅助 ---
 
@@ -161,9 +197,58 @@ func weapon_level(weapon_id: String) -> int:
 func available_slot_count() -> int:
 	return MAX_WEAPON_SLOTS - weapon_slots.size()
 
-## 按人物天赋层数应用玩家侧倍率（移速）；攻速/范围/伤害由攻击节点读 player_talent 计算。
+## 按人物天赋效果应用玩家侧属性（移速/闪避/生命上限/防御/回血）。
+## 攻速/范围/伤害/暴击等由攻击节点每帧读 player_talent.effects() 计算。
 func apply_personal_talents() -> void:
-	move_speed_mult = 1.0 + 0.1 * player_talent.owned_count("move_speed")
+	var fx: Dictionary = player_talent.effects()
+	move_speed_mult = fx.speed_mult
+	dodge_chance = fx.dodge
+	_regen_per_sec = int(fx.counts.get("regen", 0))
+	# 人物天赋生命上限：按相对差调整（与试剂等基础值互不干扰）。
+	var wanted_hp_bonus := int(fx.max_hp)
+	if wanted_hp_bonus != _person_max_hp_bonus:
+		max_hp += wanted_hp_bonus - _person_max_hp_bonus
+		_person_max_hp_bonus = wanted_hp_bonus
+		hp = mini(hp, max_hp)
+		hp_changed.emit(hp, max_hp)
+	# 人物天赋防御：同样按相对差叠加（与盔甲等基础值互不干扰）。
+	var wanted_def_bonus := int(fx.defense)
+	if wanted_def_bonus != _person_defense_bonus:
+		defense += wanted_def_bonus - _person_defense_bonus
+		_person_defense_bonus = wanted_def_bonus
+
+## 武器天赋每帧上报额外移速倍率（多把武器取最大，由各武器节点调用）。
+func apply_weapon_speed_mult(m: float) -> void:
+	weapon_speed_mult = maxf(weapon_speed_mult, m)
+
+## 武器天赋每帧上报额外体型倍率（多把武器取最大，由各武器节点调用）。
+func apply_weapon_body_scale(s: float) -> void:
+	weapon_body_scale = maxf(weapon_body_scale, s)
+
+## 道具对武器侧的最终加成（修复 v1.3 下武器道具失效）。
+## is_melee 区分近战/远程道具组；返回 { dmg_flat, dmg_mult, cd_mult, speed_bonus, range_mult }。
+func weapon_item_effects(is_melee: bool) -> Dictionary:
+	var dmg_flat := int(item_counts.get("blast_shot" if not is_melee else "good_steel", 0))
+	var mult := 1.0
+	if is_melee:
+		mult = pow(1.1, item_counts.get("whetstone", 0))
+	else:
+		mult = pow(1.1, item_counts.get("gunpowder", 0))
+	if item_counts.get("ring", 0) > 0:
+		mult *= 1.5  # 咒戒：全武器攻击 ×1.5
+	var cd_mult := 1.0
+	if is_melee:
+		cd_mult = pow(0.9, item_counts.get("handle", 0))
+	else:
+		cd_mult = pow(0.9, item_counts.get("gun_oil", 0))
+	var speed_bonus := 0.0
+	if not is_melee:
+		speed_bonus = 50.0 * item_counts.get("scope", 0)
+	var range_mult := 1.0
+	if is_melee:
+		range_mult = pow(1.1, item_counts.get("hammer", 0))
+	return { "dmg_flat": dmg_flat, "dmg_mult": mult, "cd_mult": cd_mult,
+		"speed_bonus": speed_bonus, "range_mult": range_mult }
 
 ## 调试：移除道具（减计数并撤销玩家侧效果；武器侧效果由 WeaponManager 每帧按 item_counts 重算）。
 func remove_item(item_id: String) -> void:
@@ -187,6 +272,9 @@ func remove_item(item_id: String) -> void:
 
 func take_damage(amount: int) -> void:
 	if hp <= 0:
+		return
+	# 闪避：按人物天赋闪避概率完全免伤。
+	if dodge_chance > 0.0 and randf() * 100.0 < dodge_chance:
 		return
 	# 防御力：每点减 1 点伤害，最低受到 1 点（避免完全免伤）。
 	var reduced := maxi(1, amount - defense)
@@ -231,10 +319,25 @@ func die() -> void:
 		weapon_manager_node.call("halt")
 
 func _draw() -> void:
-	# 占位蓝色圆；体型倍率（狂战）放大整体。
-	draw_circle(Vector2.ZERO, 15.0 * body_scale, Color(0.2, 0.35, 0.7))
-	draw_circle(Vector2.ZERO, 14.0 * body_scale, Color(0.4, 0.65, 1.0))
-	draw_circle(Vector2.ZERO, 5.0 * body_scale, Color(0.85, 0.92, 1.0))
+	# 渐变蓝色角色 + 光晕 + 核心 + 移动朝向小三角；体型倍率 = 基础 × 武器天赋倍率。
+	var scale_total := body_scale * weapon_body_scale
+	# 外圈光晕。
+	draw_circle(Vector2.ZERO, 20.0 * scale_total, Color(0.4, 0.65, 1.0, 0.22))
+	# 身体渐变（外深内亮）。
+	draw_circle(Vector2.ZERO, 15.0 * scale_total, Color(0.2, 0.35, 0.7))
+	draw_circle(Vector2.ZERO, 13.0 * scale_total, Color(0.4, 0.65, 1.0))
+	draw_circle(Vector2.ZERO, 9.0 * scale_total, Color(0.65, 0.82, 1.0))
+	# 白色核心。
+	draw_circle(Vector2.ZERO, 4.0 * scale_total, Color(0.9, 0.96, 1.0))
+	# 移动朝向小三角。
+	var input_dir := Input.get_vector("move_left", "move_right", "move_up", "move_down")
+	if input_dir != Vector2.ZERO:
+		var d := input_dir.normalized()
+		var tip: Vector2 = d * 16.0 * scale_total
+		var side: Vector2 = d.orthogonal() * 5.0 * scale_total
+		draw_colored_polygon(PackedVector2Array([
+			tip, tip - d * 7.0 * scale_total + side, tip - d * 7.0 * scale_total - side,
+		]), Color(1, 1, 1, 0.9))
 
 func _apply_contact_damage() -> void:
 	var now := Time.get_ticks_msec() / 1000.0

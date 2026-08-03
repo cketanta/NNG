@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="64" height="24" viewBox="0 0 64 24">
+  <!-- 经验条凹槽：深色内凹 -->
+  <rect x="1" y="1" width="62" height="22" rx="4" fill="#10141c"/>
+  <rect x="2" y="2" width="60" height="20" rx="3" fill="none" stroke="#2a303c" stroke-width="1"/>
+  <rect x="4" y="4" width="56" height="2" rx="1" fill="#05070a" opacity="0.8"/>
+</svg>

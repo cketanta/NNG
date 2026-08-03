@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 咒戒：金色戒指 + 紫宝石 -->
+  <defs>
+    <linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffe89a"/><stop offset="1" stop-color="#c89020"/></linearGradient>
+    <radialGradient id="gem" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#e0c8ff"/><stop offset="1" stop-color="#6a34a0"/></radialGradient>
+  </defs>
+  <circle cx="24" cy="28" r="14" fill="none" stroke="url(#b)" stroke-width="5"/>
+  <path d="M 24 10 L 30 4 L 26 14 Z" fill="#ffe89a"/>
+  <circle cx="24" cy="14" r="5" fill="url(#gem)" stroke="#3a1a60" stroke-width="1.5"/>
+  <circle cx="22" cy="12" r="1.5" fill="#ffffff" opacity="0.8"/>
+</svg>

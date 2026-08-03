@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 幸运草：绿四叶草 -->
+  <defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8ae09a"/><stop offset="1" stop-color="#2a7a40"/></linearGradient></defs>
+  <circle cx="20" cy="18" r="8" fill="url(#b)" stroke="#0a4a1a" stroke-width="1.5"/>
+  <circle cx="28" cy="18" r="8" fill="url(#b)" stroke="#0a4a1a" stroke-width="1.5"/>
+  <circle cx="20" cy="28" r="8" fill="url(#b)" stroke="#0a4a1a" stroke-width="1.5"/>
+  <circle cx="28" cy="28" r="8" fill="url(#b)" stroke="#0a4a1a" stroke-width="1.5"/>
+  <rect x="22" y="34" width="4" height="8" rx="2" fill="#1a5a2a" stroke="#0a4a1a" stroke-width="1.5"/>
+</svg>

@@ -11,20 +11,20 @@ extends RefCounted
 ##   move_speed / armor / max_hp / heal / luck -> 玩家侧即时生效属性
 
 const ITEMS := {
-	"gunpowder": { "name": "动能火药", "rarity": "epic", "cost": 15, "kind": "ranged_mult", "desc": "远程武器攻击力 ×1.1", "unique": false },
-	"scope": { "name": "瞄准镜", "rarity": "quality", "cost": 12, "kind": "ranged_speed", "desc": "远程武器弹速 +50", "unique": false },
-	"blast_shot": { "name": "爆破弹", "rarity": "normal", "cost": 6, "kind": "ranged_flat", "desc": "远程武器攻击力 +1", "unique": false },
-	"gun_oil": { "name": "枪械润滑剂", "rarity": "quality", "cost": 12, "kind": "ranged_cooldown", "desc": "远程武器冷却 ×0.9", "unique": false },
-	"whetstone": { "name": "磨刀石", "rarity": "epic", "cost": 15, "kind": "melee_mult", "desc": "近战武器攻击力 ×1.1", "unique": false },
-	"good_steel": { "name": "好钢", "rarity": "normal", "cost": 6, "kind": "melee_flat", "desc": "近战武器攻击力 +1", "unique": false },
-	"handle": { "name": "舒适刀柄", "rarity": "quality", "cost": 12, "kind": "melee_cooldown", "desc": "近战武器冷却 ×0.9", "unique": false },
-	"hammer": { "name": "锻锤", "rarity": "quality", "cost": 12, "kind": "melee_range_mult", "desc": "近战攻击距离 +10%", "unique": false },
-	"ring": { "name": "咒戒", "rarity": "legendary", "cost": 25, "kind": "ring", "desc": "刷怪效率 ×2，所有武器攻击力 ×1.5", "unique": true },
-	"shoes": { "name": "跑鞋", "rarity": "normal", "cost": 6, "kind": "move_speed", "desc": "移速 +10", "unique": false },
-	"armor": { "name": "劣质盔甲", "rarity": "normal", "cost": 6, "kind": "armor", "desc": "防御力 +1", "unique": false },
-	"reagent": { "name": "生命试剂", "rarity": "normal", "cost": 6, "kind": "max_hp", "desc": "血量上限 +10", "unique": false },
-	"bandage": { "name": "绷带", "rarity": "normal", "cost": 6, "kind": "heal", "desc": "立即回复 10 血", "unique": false },
-	"clover": { "name": "幸运草", "rarity": "normal", "cost": 6, "kind": "luck", "desc": "幸运值 +1", "unique": false },
+	"gunpowder": { "name": "动能火药", "rarity": "epic", "cost": 15, "kind": "ranged_mult", "desc": "远程武器攻击力 ×1.1", "unique": false, "icon": "res://assets/items/gunpowder.svg" },
+	"scope": { "name": "瞄准镜", "rarity": "quality", "cost": 12, "kind": "ranged_speed", "desc": "远程武器弹速 +50", "unique": false, "icon": "res://assets/items/scope.svg" },
+	"blast_shot": { "name": "爆破弹", "rarity": "normal", "cost": 6, "kind": "ranged_flat", "desc": "远程武器攻击力 +1", "unique": false, "icon": "res://assets/items/blast_shot.svg" },
+	"gun_oil": { "name": "枪械润滑剂", "rarity": "quality", "cost": 12, "kind": "ranged_cooldown", "desc": "远程武器冷却 ×0.9", "unique": false, "icon": "res://assets/items/gun_oil.svg" },
+	"whetstone": { "name": "磨刀石", "rarity": "epic", "cost": 15, "kind": "melee_mult", "desc": "近战武器攻击力 ×1.1", "unique": false, "icon": "res://assets/items/whetstone.svg" },
+	"good_steel": { "name": "好钢", "rarity": "normal", "cost": 6, "kind": "melee_flat", "desc": "近战武器攻击力 +1", "unique": false, "icon": "res://assets/items/good_steel.svg" },
+	"handle": { "name": "舒适刀柄", "rarity": "quality", "cost": 12, "kind": "melee_cooldown", "desc": "近战武器冷却 ×0.9", "unique": false, "icon": "res://assets/items/handle.svg" },
+	"hammer": { "name": "锻锤", "rarity": "quality", "cost": 12, "kind": "melee_range_mult", "desc": "近战攻击距离 +10%", "unique": false, "icon": "res://assets/items/hammer.svg" },
+	"ring": { "name": "咒戒", "rarity": "legendary", "cost": 25, "kind": "ring", "desc": "刷怪效率 ×2，所有武器攻击力 ×1.5", "unique": true, "icon": "res://assets/items/ring.svg" },
+	"shoes": { "name": "跑鞋", "rarity": "normal", "cost": 6, "kind": "move_speed", "desc": "移速 +10", "unique": false, "icon": "res://assets/items/shoes.svg" },
+	"armor": { "name": "劣质盔甲", "rarity": "normal", "cost": 6, "kind": "armor", "desc": "防御力 +1", "unique": false, "icon": "res://assets/items/armor.svg" },
+	"reagent": { "name": "生命试剂", "rarity": "normal", "cost": 6, "kind": "max_hp", "desc": "血量上限 +10", "unique": false, "icon": "res://assets/items/reagent.svg" },
+	"bandage": { "name": "绷带", "rarity": "normal", "cost": 6, "kind": "heal", "desc": "立即回复 10 血", "unique": false, "icon": "res://assets/items/bandage.svg" },
+	"clover": { "name": "幸运草", "rarity": "normal", "cost": 6, "kind": "luck", "desc": "幸运值 +1", "unique": false, "icon": "res://assets/items/clover.svg" },
 }
 
 const RARITY_NAMES := { "normal": "普通", "quality": "优质", "epic": "史诗", "legendary": "传说" }
@@ -66,6 +66,10 @@ static func rarity_name(item_id: String) -> String:
 
 static func rarity_color(item_id: String) -> Color:
 	return RARITY_COLORS.get(rarity(item_id), Color.WHITE)
+
+## 道具图标贴图路径（资产在 assets/items/）。
+static func icon(item_id: String) -> String:
+	return def(item_id).get("icon", "")
 
 ## 计算某把武器的最终属性（含道具加成）。公式单一来源，WeaponManager 与商店/背包 UI 共用。
 ## 规则：先加算后乘算 —— 攻击力 = (base + Σ加算) × Π乘算（咒戒 ×1.5 对全武器生效）。

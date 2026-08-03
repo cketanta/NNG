@@ -1,6 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <!-- 敌方弹：绿圆 + 深色描边，明显区别于友方蓝系 -->
-  <circle cx="12" cy="12" r="9" fill="#3f9c4a"/>
-  <circle cx="12" cy="12" r="6.5" fill="#7fe08a"/>
-  <circle cx="12" cy="12" r="9" fill="none" stroke="#1d4a24" stroke-width="2"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 敌方弹：绿渐变球 + 深色描边 -->
+  <defs>
+    <radialGradient id="b" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#a0f0a8"/>
+      <stop offset="0.5" stop-color="#4a9a5a"/>
+      <stop offset="1" stop-color="#1d5a2a"/>
+    </radialGradient>
+  </defs>
+  <circle cx="24" cy="24" r="13" fill="url(#b)" stroke="#122a18" stroke-width="2.5"/>
+  <circle cx="24" cy="24" r="7" fill="#d0ffd8" opacity="0.7"/>
 </svg>

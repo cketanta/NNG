@@ -30,9 +30,17 @@ var _split_count := 0
 var _is_small := false
 var _spawn_black_hole := false
 var _black_hole_radius := 130.0
-var _already_hit := false    # 每颗子弹只命中一只怪、命中即消失（不穿透存活、不累积）
+var _hit_bodies := {}         # 已命中的敌人（防止同颗子弹重复命中同一怪）
 var _visual_type := "default"  # 子弹贴图类型（staff/pistol/revolver/blade_air/splitter/splitter_child/black_hole_gun）
 var _homing_deg := 0.0      # 追踪强度：每帧最大转向角度（0=不追踪，枪斗术弱/智能制导强）
+var _crit_chance := 0.0     # 暴击率（%，命中时 roll）
+var _crit_dmg := 0.0        # 暴击额外伤害（%）
+var _lifesteal := 0.0       # 吸血比例（%，命中回复血量）
+var _pierce := 0            # 剩余穿透数（>0 时命中后继续飞行）
+var _explode := false       # 命中小范围爆炸（法杖爆裂）
+var _explode_dmg := 1
+var _poison := false        # 命中施毒（分裂者剧毒）
+var _child_homing := 0.0    # 分裂小弹追踪强度（分裂者制导分裂）
 
 var _pull_target: Node2D = null
 var _pull_speed := 0.0
@@ -40,6 +48,11 @@ var _twitch_time := 0.0
 
 var _child_scene: PackedScene
 var _black_hole_scene: PackedScene
+
+# 黑洞枪额外参数（天赋：强吸 / 坍缩 / 持久）。
+var _bh_pull_strong := false
+var _bh_duration_mult := 1.0
+var _black_hole_collapse_dmg := 0
 
 func setup(dir: Vector2, speed: float, damage: int, friendly: bool) -> void:
 	_direction = dir.normalized()
@@ -78,10 +91,42 @@ func set_visual_type(type: String) -> void:
 func set_homing(deg_per_frame: float) -> void:
 	_homing_deg = maxf(deg_per_frame, 0.0)
 
+## 设置暴击参数：命中时按 chance% 概率造成 (1 + dmg/100) 倍伤害。
+func set_crit(chance: float, dmg: float) -> void:
+	_crit_chance = maxf(chance, 0.0)
+	_crit_dmg = maxf(dmg, 0.0)
+
+## 设置吸血比例（%）：命中回复一定比例伤害的血量（人物血之渴望）。
+func set_lifesteal(pct: float) -> void:
+	_lifesteal = maxf(pct, 0.0)
+
+## 设置穿透数：>0 时命中后继续飞行，可再命中 count 只敌人（法杖/回旋镖贯穿、人物贯穿）。
+func set_pierce(count: int) -> void:
+	_pierce = maxi(count, 0)
+
+## 法杖爆裂：命中后对附近敌人造成 dmg 点二次伤害。
+func set_explode(dmg: int) -> void:
+	_explode = true
+	_explode_dmg = maxi(dmg, 1)
+
+## 分裂者剧毒：命中施加中毒叠加（每秒掉血）。
+func set_poison() -> void:
+	_poison = true
+
+## 分裂小弹的追踪强度（分裂者制导分裂天赋）。
+func set_split_child_homing(deg: float) -> void:
+	_child_homing = maxf(deg, 0.0)
+
 ## 黑洞枪：命中敌人在命中点生成黑洞。
 func set_spawn_black_hole(radius: float) -> void:
 	_spawn_black_hole = true
 	_black_hole_radius = radius
+
+## 黑洞枪额外参数（天赋）：强吸 / 坍缩伤害 / 持续时间倍率。
+func set_black_hole_extra(strong_pull: bool, collapse_dmg: int, duration_mult: float) -> void:
+	_bh_pull_strong = strong_pull
+	_black_hole_collapse_dmg = maxi(collapse_dmg, 0)
+	_bh_duration_mult = maxf(duration_mult, 1.0)
 
 ## 黑洞在本弹进入其吸引范围时调用。
 func apply_pull(center: Node2D, speed: float) -> void:
@@ -148,16 +193,46 @@ func _draw_fallback_ball() -> void:
 		draw_circle(Vector2.ZERO, radius * 0.4, Color(1.0, 1.0, 1.0, 0.9))
 
 func _on_body_entered(body: Node2D) -> void:
-	if _already_hit:
+	if not body.has_method("take_damage"):
 		return
-	_already_hit = true
-	if body.has_method("take_damage"):
-		body.take_damage(_damage)
-		if _friendly:
-			if _split_count > 0:
-				_spawn_split_children()
-			if _spawn_black_hole:
-				_spawn_black_hole_at(global_position)
+	if _hit_bodies.has(body):
+		return
+	_hit_bodies[body] = true
+	# 暴击：命中时按暴击率 roll，命中则按暴击伤害倍率加成。
+	var crit_hit := false
+	if _crit_chance > 0.0 and randf() * 100.0 < _crit_chance:
+		crit_hit = true
+	var real_dmg := _damage
+	if crit_hit:
+		real_dmg = maxi(1, int(round(_damage * (1.0 + _crit_dmg / 100.0))))
+	# 特效：命中爆闪 + 伤害数字；暴击屏幕震动。
+	Fx.hit(global_position, get_tree(), crit_hit)
+	Fx.number(global_position, get_tree(), str(real_dmg), crit_hit)
+	if crit_hit:
+		Fx.shake(get_tree(), 5.0)
+	body.take_damage(real_dmg)
+	# 吸血：命中回复一定比例血量（人物血之渴望）。
+	if _lifesteal > 0.0 and _friendly:
+		var player := get_tree().get_first_node_in_group("player")
+		if player != null and player.has_method("heal"):
+			player.heal(maxi(1, int(round(real_dmg * _lifesteal / 100.0))))
+	if _friendly:
+		# 剧毒（分裂者）。
+		if _poison and body.has_method("add_poison"):
+			body.add_poison(1)
+		# 分裂（分裂者）。
+		if _split_count > 0:
+			_spawn_split_children()
+		# 黑洞（黑洞枪）。
+		if _spawn_black_hole:
+			_spawn_black_hole_at(global_position)
+		# 爆裂（法杖）。
+		if _explode:
+			_explode_area()
+	# 穿透：命中后继续飞行而非消失，剩余穿透数耗尽才消失。
+	if _pierce > 0:
+		_pierce -= 1
+		return
 	queue_free()
 
 func _spawn_split_children() -> void:
@@ -169,6 +244,8 @@ func _spawn_split_children() -> void:
 		child.setup(dir, _speed * 0.9, _damage, true)
 		child.set_small_child()
 		child.set_visual_type("splitter_child")
+		if _child_homing > 0.0:
+			child.set_homing(_child_homing)
 		child.global_position = global_position
 		get_tree().current_scene.add_child(child)
 
@@ -177,8 +254,22 @@ func _spawn_black_hole_at(pos: Vector2) -> void:
 		_black_hole_scene = load(BLACK_HOLE_SCENE_PATH)
 	var hole := _black_hole_scene.instantiate()
 	hole.radius = _black_hole_radius
+	if _bh_pull_strong:
+		hole.enemy_pull_speed = 420.0  # 强吸：吸附更快
+	if _bh_duration_mult > 1.0:
+		hole.lifetime *= _bh_duration_mult  # 持久：持续时间延长
+	if _black_hole_collapse_dmg > 0:
+		hole.collapse_damage = _black_hole_collapse_dmg
+		hole.collapse_radius = _black_hole_radius * 0.9  # 坍缩：消失时爆炸
 	get_tree().current_scene.add_child(hole)
 	hole.global_position = pos
+
+## 法杖爆裂：命中点附近敌人受一次额外伤害。
+func _explode_area() -> void:
+	var blast_r := 60.0
+	for enemy: Node2D in get_tree().get_nodes_in_group("enemies"):
+		if is_instance_valid(enemy) and global_position.distance_to(enemy.global_position) < blast_r:
+			enemy.take_damage(_explode_dmg)
 
 ## 追踪：朝最近敌人逐步转向（幅度受 _homing_deg 限制）。
 func _apply_homing(delta: float) -> void:

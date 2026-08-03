@@ -1,5 +1,5 @@
 extends SceneTree
-## 天赋测试：升级发人物天赋点 + 4 分支加点；武器天赋按武器等级点数（三选一 + 前置/冲突）；测试模式点击点亮/取消。
+## 天赋测试：升级发人物天赋点 + 人物树加点；武器天赋按武器等级点数（三选一 + 前置/冲突）；测试模式点击点亮/取消。
 
 var _frames := 0
 var _failures: Array[String] = []
@@ -24,12 +24,12 @@ func _process(_delta: float) -> bool:
 			print("[OK] level up grants 1 personal talent point")
 		else:
 			_failures.append("personal talent points=%d" % pt.points)
-		# 人物天赋加点：疾跑 +1 层，消耗 1 点。
-		if _main.unlock_personal_talent("move_speed"):
-			if pt.owned_count("move_speed") == 1 and pt.points == 0:
-				print("[OK] personal talent unlocked (move_speed x1)")
+		# 人物天赋加点：树状节点 person_brute，消耗 1 点。
+		if _main.unlock_personal_talent("person_brute"):
+			if pt.tree.is_owned("player", "person_brute") and pt.points == 0:
+				print("[OK] personal talent unlocked (person_brute)")
 			else:
-				_failures.append("personal unlock wrong (owned=%d pts=%d)" % [pt.owned_count("move_speed"), pt.points])
+				_failures.append("personal unlock wrong (owned=%s pts=%d)" % [pt.tree.is_owned("player", "person_brute"), pt.points])
 		else:
 			_failures.append("personal unlock failed")
 		# 给玩家一把短刃（Lv.1 = 1 点武器天赋）。

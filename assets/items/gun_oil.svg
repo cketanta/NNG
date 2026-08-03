@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 枪械润滑剂：绿油壶 -->
+  <defs><linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6ac880"/><stop offset="1" stop-color="#1a5a30"/></linearGradient></defs>
+  <rect x="14" y="16" width="20" height="22" rx="5" fill="url(#b)" stroke="#0a3a1a" stroke-width="2"/>
+  <path d="M 22 10 L 26 10 L 24 16 Z" fill="#c8e0d0" stroke="#0a3a1a" stroke-width="1.5"/>
+  <rect x="20" y="8" width="3" height="4" fill="#0a3a1a"/>
+  <rect x="18" y="26" width="12" height="6" rx="2" fill="#0a3a1a"/>
+</svg>

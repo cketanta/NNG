@@ -9,9 +9,17 @@ const HEART_SCENE := preload("res://scenes/items/heart.tscn")
 
 enum GameState { START, COMBAT, SHOP, GAMEOVER }
 
-const WEAPON_IDS := ["blade", "revolver"]  # 商店售卖的武器（破旧手枪不在商店，仅初始/可出售）
-const WEAPON_NAMES := { "pistol": "破旧手枪", "blade": "短刃", "revolver": "左轮手枪" }
-const WEAPON_BASE_COST := { "blade": 8, "revolver": 6, "pistol": 4 }
+const WEAPON_IDS := ["blade", "revolver", "whip", "staff", "splitter", "black_hole_gun", "boomerang"]  # 商店售卖的武器（破旧手枪不在商店，仅初始/可出售）
+const WEAPON_NAMES := {
+	"pistol": "破旧手枪", "blade": "短刃", "revolver": "左轮手枪",
+	"whip": "鞭子", "staff": "法杖", "splitter": "分裂者",
+	"black_hole_gun": "黑洞枪", "boomerang": "回旋镖",
+}
+const WEAPON_BASE_COST := {
+	"pistol": 4, "blade": 8, "revolver": 6,
+	"whip": 5, "staff": 6, "splitter": 7,
+	"black_hole_gun": 9, "boomerang": 7,
+}
 
 const DIFFICULTY_IDS := ["easy", "normal", "hard"]
 const DIFFICULTIES := {
@@ -295,9 +303,9 @@ func unlock_weapon_talent(slot_idx: int, talent_id: String) -> bool:
 		return true
 	return false
 
-## 加点人物天赋（4 分支线性树）。
-func unlock_personal_talent(branch_id: String) -> bool:
-	if player.player_talent.unlock(branch_id):
+## 加点人物天赋（树状节点）。
+func unlock_personal_talent(talent_id: String) -> bool:
+	if player.player_talent.unlock(talent_id):
 		player.apply_personal_talents()
 		talent_panel.refresh()
 		backpack_panel.refresh()
@@ -434,8 +442,12 @@ func _on_player_died() -> void:
 func _on_enemy_killed(global_pos: Vector2, xp_value: int, gold_value: int) -> void:
 	kills += 1
 	hud.update_kills(kills)
-	spawn_xp_gem(global_pos, xp_value)
-	spawn_coin(global_pos, gold_value)
+	# 人物天赋：经验/金币加成（聚财 / 慧眼）。
+	var fx: Dictionary = player.player_talent.effects()
+	var final_xp := maxi(1, int(round(xp_value * (1.0 + fx.xp_gain / 100.0))))
+	var final_gold := maxi(1, int(round(gold_value * (1.0 + fx.gold_gain / 100.0))))
+	spawn_xp_gem(global_pos, final_xp)
+	spawn_coin(global_pos, final_gold)
 	var heart_chance: float = 0.05 + 0.05 * player.luck
 	if randf() < heart_chance:
 		spawn_heart(global_pos)

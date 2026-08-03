@@ -14,6 +14,34 @@
 
 ---
 
+## v1.4.0
+
+**日期**：2026-08-03
+**状态**：天赋系统效果驱动重构 + 武器库扩充（8 把武器全满槽、110 天赋节点）+ UI 精致化（真树布局 + 9-patch 贴图）+ 分辨率 1920×1080 适配 + 美术全面强化（图标/特效/HUD/主菜单/结算）。
+
+**包含内容**：
+- **天赋系统重构**：`TalentTree` 节点加 `effects` 字段 + `aggregate()` 效果驱动聚合；人物天赋从 4 分支线性改为**树状多维**（暴击/暴击伤害/吸血/闪避/再生/防御/生命上限/经验/金币加成，暴击流↔连珠流互斥）；武器等级 N = N 点武器天赋点不变
+- **武器库扩充**：重新接入鞭子/法杖/分裂者/黑洞枪 + 新造**回旋镖**（往返穿透弹），商店可购武器达 7 把 + 初始手枪共 8 槽全满；每把 10 节点天赋树；武器节点总数 88 + 人物 22 = **110 天赋节点**
+- **修复**：左轮转盘枪手无法触发（改监听右键输入）；武器侧道具加成失效（火药/磨刀石/咒戒等，新增 `player.weapon_item_effects`）；狂战覆盖人物移速（改乘算叠加）
+- **新机制**：暴击/吸血/穿透/额外弹/闪避/再生/经验金币加成/毒 DOT/黑洞坍缩/回旋镖往返
+- **UI 精致化**：天赋树重写为**真树布局**（父子垂直对齐 + 贝塞尔连线 + 圆角节点 + 可滚动）；全 UI 换 **9-patch 贴图边框背景**（`assets/ui/`）；卡片矩形化；商店三列布局 + 新增「已有道具」区
+- **分辨率**：项目窗口 1280×720 → **1920×1080**（canvas_items 自适应缩放），全局字号/间距/面板宽度按 1080p 放大
+- **美术强化**：武器/子弹/道具 SVG 重绘（渐变+描边+高光）；敌人/玩家/掉落物代码绘制升级（渐变身体/独眼朝向/光晕/旋转高光）；HUD 渐变血条+状态栏浮层+低血量闪烁；战斗特效（命中爆闪/上飘伤害数字/死亡粒子/受击闪白/暴击屏幕震动）；主菜单浮动星光+艺术标题+入场动画；结算页逐条浮现动画
+
+**关键文件**（回退时对照）：
+- `scripts/systems/talent_tree.gd` / `player_talent.gd`：效果驱动天赋 + 人物树状天赋
+- `scripts/attacks/*.gd`、`scripts/weapons/*.gd`：whip/staff/splitter/black_hole_gun 重写为天赋驱动、`boomerang.gd`/`boomerang_projectile.gd` 新增、`projectile.gd` 扩展（暴击/吸血/穿透/毒/黑洞参数）
+- `scripts/player.gd`、`scripts/main.gd`、`scripts/weapons/weapon_manager.gd`
+- `scripts/ui/*.gd`、`assets/ui/`（panel_bg/button/title_bar/bg_full/hp_xp 条）、`assets/items/`（14 道具图标）、`assets/weapons/`、`assets/projectiles/`
+- `scripts/effects/fx.gd` / `hit_fx.gd` / `damage_number.gd` / `death_fx.gd` / `starfield.gd`（战斗特效）
+- `scripts/enemies/enemy_base.gd`、`scripts/items/xp_gem|coin|heart.gd`、`scripts/hud.gd`
+- `themes/cjk_theme.tres`、`scenes/main.tscn`、`project.godot`（分辨率）
+- `tests/`：新增 talent_tree/whip/staff/splitter/bhg/boomerang 测试，重写 player_talent/talent
+
+**导出**：`exports/v1.4.0/NNG_Ver1.4.0.exe`（单文件，`embed_pck=true`）+ `readme.txt`。
+
+**备注**：23 个无头测试全过。遗留 `attack_select_panel.gd`/`talent_tree_ui.gd`/`start_panel.gd` 孤儿脚本保留未删。
+
 ## v1.3.0
 
 **日期**：2026-08-02

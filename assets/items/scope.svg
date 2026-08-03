@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 瞄准镜：绿管 + 镜片 -->
+  <defs><linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5ac070"/><stop offset="1" stop-color="#1a5a2a"/></linearGradient></defs>
+  <rect x="8" y="16" width="32" height="16" rx="8" fill="url(#b)" stroke="#0a3a14" stroke-width="2"/>
+  <circle cx="16" cy="24" r="7" fill="#a0e0ff" stroke="#0a3a14" stroke-width="2"/>
+  <line x1="12" y1="24" x2="20" y2="24" stroke="#0a3a14" stroke-width="2"/>
+  <line x1="16" y1="20" x2="16" y2="28" stroke="#0a3a14" stroke-width="2"/>
+  <circle cx="16" cy="24" r="1.5" fill="#0a3a14"/>
+</svg>

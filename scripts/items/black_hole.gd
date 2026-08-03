@@ -12,6 +12,8 @@ const CORE_TEXTURE := preload("res://assets/effects/black_hole_core.svg")  # 核
 @export var bullet_pull_speed: float = 560.0
 @export var enemy_pull_speed: float = 260.0
 @export var lifetime: float = 4.0
+@export var collapse_damage := 0     # 坍缩天赋：>0 时黑洞消失产生圆形爆炸伤害
+@export var collapse_radius := 0.0   # 爆炸半径（0 表示用当前 radius）
 
 var _life := 0.0
 var _rotate_angle := 0.0
@@ -20,6 +22,8 @@ func _process(delta: float) -> void:
 	_life += delta
 	if _life >= lifetime:
 		get_tree().call_group(ENEMY_GROUP, "clear_pull")
+		if collapse_damage > 0:
+			_explode()
 		queue_free()
 		return
 
@@ -33,7 +37,16 @@ func _process(delta: float) -> void:
 	for group_name in BULLET_GROUPS:
 		for bullet in get_tree().get_nodes_in_group(group_name):
 			if is_instance_valid(bullet) and global_position.distance_to(bullet.global_position) < radius:
-				bullet.apply_pull(self, bullet_pull_speed)
+				# 只有实现了 apply_pull 的弹幕才被吸附（回旋镖往返穿透弹不实现，黑洞对其免疫）。
+				if bullet.has_method("apply_pull"):
+					bullet.apply_pull(self, bullet_pull_speed)
+
+## 坍缩：消失时对范围内敌人造成一次圆形伤害（黑洞枪坍缩天赋）。
+func _explode() -> void:
+	var blast_r := collapse_radius if collapse_radius > 0.0 else radius
+	for enemy in get_tree().get_nodes_in_group(ENEMY_GROUP):
+		if is_instance_valid(enemy) and global_position.distance_to(enemy.global_position) < blast_r:
+			enemy.take_damage(collapse_damage)
 
 func _draw() -> void:
 	# 吸引范围指示：`radius` 上画一圈淡环 + 旋转粒子（该范围随黑洞枪等级扩大）。

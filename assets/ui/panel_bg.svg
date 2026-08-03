@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <!-- 圆角面板底（9-patch，texture_margin 16）：深蓝灰渐变 + 蓝灰边框 + 顶部高光线 -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2532" stop-opacity="0.97"/>
+      <stop offset="0.55" stop-color="#0f151f" stop-opacity="0.97"/>
+      <stop offset="1" stop-color="#0a0e16" stop-opacity="0.97"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5f82ae" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#2e4259" stop-opacity="0.95"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="94" height="94" rx="14" fill="url(#bg)"/>
+  <rect x="1.5" y="1.5" width="93" height="93" rx="13" fill="none" stroke="url(#edge)" stroke-width="1.6"/>
+  <rect x="8" y="3.2" width="80" height="2.4" rx="1.2" fill="#7fa6d4" opacity="0.5"/>
+</svg>

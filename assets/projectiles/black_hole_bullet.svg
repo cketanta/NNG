@@ -1,6 +1,18 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-  <!-- 黑洞枪弹：深紫实心 + 亮紫细环 -->
-  <circle cx="12" cy="12" r="9" fill="#1a1030"/>
-  <circle cx="12" cy="12" r="6.5" fill="none" stroke="#a45cff" stroke-width="2.5"/>
-  <circle cx="12" cy="12" r="3" fill="#e8dcff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 黑洞枪弹：深紫能量球 + 亮紫环 + 白心 -->
+  <defs>
+    <radialGradient id="b" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#2a1038"/>
+      <stop offset="0.7" stop-color="#4a1a60"/>
+      <stop offset="1" stop-color="#8a44c8"/>
+    </radialGradient>
+    <radialGradient id="g" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#a45cff" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#a45cff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="24" cy="24" r="17" fill="url(#g)"/>
+  <circle cx="24" cy="24" r="13" fill="url(#b)"/>
+  <circle cx="24" cy="24" r="10" fill="none" stroke="#a45cff" stroke-width="2.5"/>
+  <circle cx="24" cy="24" r="4" fill="#e8dcff"/>
 </svg>

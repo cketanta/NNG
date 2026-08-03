@@ -1,5 +1,12 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16">
-  <!-- 分裂小弹：缩小版黄橙菱形 -->
-  <polygon points="8,1 14,8 8,15 2,8" fill="#f0c040"/>
-  <polygon points="8,3.5 12,8 8,12.5 4,8" fill="#ffe9a0"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 分裂小弹：金黄菱形 -->
+  <defs>
+    <radialGradient id="b" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff6cc"/>
+      <stop offset="0.6" stop-color="#ffd95a"/>
+      <stop offset="1" stop-color="#d89a20"/>
+    </radialGradient>
+  </defs>
+  <polygon points="24,6 38,24 24,42 10,24" fill="url(#b)" stroke="#8a5f10" stroke-width="1.5"/>
+  <polygon points="24,14 31,24 24,34 17,24" fill="#fff6e0" opacity="0.8"/>
 </svg>

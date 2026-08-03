@@ -17,6 +17,7 @@ const BLEED_DURATION := 5.0  # 流血持续时间（秒）
 
 var hp: int
 var _player: Node2D = null
+var _flash_timer := 0.0  # 受击闪白剩余时间（>0 时 modulate 泛白）
 var _pull_active := false
 var _pull_center := Vector2.ZERO
 var _pull_force := 0.0
@@ -28,6 +29,11 @@ var _pull_twitch_time := 0.0
 var bleed_stacks := 0    # 当前流血层数
 var bleed_max := 30      # 流血上限（郁色创伤 → 50）
 var _bleed_time := 0.0   # 距上次刷新流血的时间
+
+# --- 中毒（分裂者剧毒天赋） ---
+var poison_stacks := 0   # 当前中毒层数
+var poison_max := 5      # 中毒叠加上限
+var _poison_tick := 0.0  # 中毒掉血计时
 
 func _ready() -> void:
 	hp = max_hp
@@ -41,11 +47,27 @@ func _process(delta: float) -> void:
 		if _bleed_time >= BLEED_DURATION:
 			bleed_stacks = 0
 			_bleed_time = 0.0
+	# 中毒：每秒掉 poison_stacks 点血（分裂者剧毒天赋）。
+	if poison_stacks > 0:
+		_poison_tick += delta
+		if _poison_tick >= 1.0:
+			_poison_tick = 0.0
+			take_damage(poison_stacks)
+	# 受击闪白计时恢复。
+	if _flash_timer > 0.0:
+		_flash_timer -= delta
+		if _flash_timer <= 0.0:
+			modulate = Color(1, 1, 1)
+	queue_redraw()  # 每帧刷新朝向/流血中毒变色/闪白
 
 ## 叠加流血（短刃致残命中调用）；刷新持续时间，叠加上限由 bleed_max 限制。
 func add_bleed(amount: int) -> void:
 	bleed_stacks = mini(bleed_stacks + amount, bleed_max)
 	_bleed_time = 0.0
+
+## 叠加中毒（分裂者剧毒天赋命中调用）；每秒掉一层血，叠加上限 poison_max。
+func add_poison(amount: int) -> void:
+	poison_stacks = mini(poison_stacks + amount, poison_max)
 
 ## 随波次变强（在 add_child 之前调用）。
 func apply_wave_scale(wave: int) -> void:
@@ -75,6 +97,9 @@ func direction_to_player() -> Vector2:
 func take_damage(amount: int) -> void:
 	if hp <= 0:
 		return
+	# 受击闪白：短暂泛白提示打击。
+	modulate = Color(2.4, 2.4, 2.4)
+	_flash_timer = 0.12
 	# 流血：受到攻击时额外受到流血层数点伤害（致残效果）。
 	var total := amount
 	if bleed_stacks > 0:
@@ -115,6 +140,8 @@ func clear_pull() -> void:
 
 func die() -> void:
 	died.emit(global_position, xp_value, gold_value)
+	# 死亡粒子（用本体色）。
+	Fx.death(global_position, get_tree(), color)
 	queue_free()
 
 ## 玩家受击盒检测到该敌人重叠时调用。
@@ -122,6 +149,24 @@ func get_contact_damage_value() -> int:
 	return contact_damage
 
 func _draw() -> void:
-	# 占位彩色圆 + 深色描边；以后换成贴图。
-	draw_circle(Vector2.ZERO, 15.0, color.darkened(0.5))
-	draw_circle(Vector2.ZERO, 14.0, color)
+	# 渐变身体 + 描边 + 眼睛 + 朝向；流血偏红、中毒偏绿提示。
+	var body := color
+	if bleed_stacks > 0:
+		body = body.lerp(Color(0.9, 0.2, 0.2), 0.55)
+	if poison_stacks > 0:
+		body = body.lerp(Color(0.25, 0.9, 0.35), 0.55)
+	# 外圈描边。
+	draw_circle(Vector2.ZERO, 16.0, body.darkened(0.6))
+	# 身体渐变（外深内亮）。
+	draw_circle(Vector2.ZERO, 15.0, body.darkened(0.4))
+	draw_circle(Vector2.ZERO, 12.5, body)
+	draw_circle(Vector2.ZERO, 9.5, body.lightened(0.3))
+	# 顶部白色高光。
+	draw_circle(Vector2(-4.0, -5.0), 3.5, Color(1, 1, 1, 0.7))
+	draw_circle(Vector2(-3.0, -4.0), 1.5, Color(1, 1, 1, 0.9))
+	# 朝向指示：朝玩家的独眼。
+	var dir := direction_to_player()
+	if dir != Vector2.ZERO:
+		var eye := dir * 6.0
+		draw_circle(eye, 3.2, Color(0.08, 0.08, 0.12))
+		draw_circle(eye + dir * 1.2, 1.3, Color(1, 1, 1, 0.95))

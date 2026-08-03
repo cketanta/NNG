@@ -22,6 +22,9 @@ var melee_range := base_range
 var _aim_dir := Vector2.RIGHT
 var _firing := true
 var _timer := 0.0
+var _crit_chance := 0.0  # 暴击率（%，人物锐眼）
+var _crit_dmg := 0.0     # 暴击额外伤害（%）
+var _lifesteal := 0.0    # 吸血比例（%，人物血之渴望）
 
 func set_aim_direction(dir: Vector2) -> void:
 	_aim_dir = dir.normalized()
@@ -46,11 +49,16 @@ func _ready() -> void:
 func _player() -> Node2D:
 	return get_parent().get_parent() as Node2D
 
-## 人物天赋（迅捷攻速 / 狂力伤害）应用到初始手枪。
+## 人物天赋 + 道具应用到初始手枪（无武器天赋树）。
 func _apply_talents() -> void:
-	var pt: PlayerTalent = _player().player_talent
-	damage = maxi(1, int(round(base_damage * pow(1.1, pt.owned_count("damage")))))
-	cooldown = base_cooldown * pow(0.92, pt.owned_count("attack_speed"))
+	var person: Dictionary = _player().player_talent.effects()
+	var item: Dictionary = _player().weapon_item_effects(false)
+	_crit_chance = person.crit_chance
+	_crit_dmg = person.crit_dmg
+	_lifesteal = person.lifesteal
+	damage = maxi(1, int(round((base_damage + item.dmg_flat) * person.dmg_mult * item.dmg_mult)))
+	cooldown = base_cooldown * person.cd_mult * item.cd_mult
+	projectile_speed = base_projectile_speed + item.speed_bonus
 
 func _process(delta: float) -> void:
 	visible = _player().visible  # 跟随玩家可见性（菜单阶段玩家隐藏时攻击也不渲染）
@@ -67,6 +75,8 @@ func fire() -> void:
 	var projectile := PROJECTILE_SCENE.instantiate()
 	projectile.setup(_aim_dir, projectile_speed, damage, true)
 	projectile.set_visual_type("pistol")
+	projectile.set_crit(_crit_chance, _crit_dmg)
+	projectile.set_lifesteal(_lifesteal)
 	projectile.global_position = global_position  # 发射中心 = 玩家自身
 	get_tree().current_scene.add_child(projectile)
 

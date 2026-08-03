@@ -11,6 +11,7 @@
 [ext_resource type="Script" uid="uid://jyhto8uafimi" path="res://scripts/ui/difficulty_panel.gd" id="10_difficulty"]
 [ext_resource type="Script" uid="uid://dl4pnjklfeomm" path="res://scripts/ui/pause_panel.gd" id="11_pause"]
 [ext_resource type="Script" uid="uid://inbv73ogdq2p" path="res://scripts/ui/debug_panel.gd" id="12_debug"]
+[ext_resource type="Texture2D" path="res://assets/ui/bg_full.svg" id="13_bg"]
 
 [sub_resource type="SystemFont" id="SystemFont_cjk"]
 font_names = PackedStringArray("Microsoft YaHei", "Segoe UI", "Arial")
@@ -24,93 +25,101 @@ script = ExtResource("1_main")
 script = ExtResource("2_spawner")
 
 [node name="HUD" type="CanvasLayer" parent="." unique_id=1106049600]
+theme = ExtResource("8_theme")
 script = ExtResource("3_hud")
 
 [node name="HPBar" type="ProgressBar" parent="HUD" unique_id=1638148379]
-offset_left = 16.0
-offset_top = 16.0
-offset_right = 296.0
-offset_bottom = 40.0
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 464.0
+offset_bottom = 64.0
 theme_override_fonts/font = SubResource("SystemFont_cjk")
 value = 100.0
 
 [node name="KillsLabel" type="Label" parent="HUD" unique_id=1896296387]
-offset_left = 16.0
-offset_top = 48.0
-offset_right = 336.0
-offset_bottom = 72.0
+offset_left = 24.0
+offset_top = 76.0
+offset_right = 520.0
+offset_bottom = 116.0
 theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
 theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 20
 text = "击杀: 0"
 
 [node name="TimeLabel" type="Label" parent="HUD" unique_id=2109387028]
-offset_left = 16.0
-offset_top = 76.0
-offset_right = 336.0
-offset_bottom = 100.0
+offset_left = 24.0
+offset_top = 122.0
+offset_right = 520.0
+offset_bottom = 162.0
 theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
 theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 20
 text = "时间: 00:00"
 
 [node name="WaveLabel" type="Label" parent="HUD" unique_id=43009112]
-offset_left = 16.0
-offset_top = 104.0
-offset_right = 336.0
-offset_bottom = 128.0
+offset_left = 24.0
+offset_top = 168.0
+offset_right = 520.0
+offset_bottom = 208.0
 theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
 theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 20
 text = "第 1 波"
 
 [node name="XPBar" type="ProgressBar" parent="HUD" unique_id=989209482]
-offset_left = 16.0
-offset_top = 132.0
-offset_right = 296.0
-offset_bottom = 156.0
+offset_left = 24.0
+offset_top = 214.0
+offset_right = 464.0
+offset_bottom = 258.0
 max_value = 5.0
 show_percentage = false
 
 [node name="XPLabel" type="Label" parent="HUD" unique_id=1171006439]
-offset_left = 16.0
-offset_top = 132.0
-offset_right = 296.0
-offset_bottom = 156.0
+offset_left = 24.0
+offset_top = 214.0
+offset_right = 464.0
+offset_bottom = 258.0
 theme_override_colors/font_color = Color(0.95, 0.95, 0.95, 1)
 theme_override_colors/font_shadow_color = Color(0, 0, 0, 1)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 18
 text = "经验 0/5"
 horizontal_alignment = 1
 
 [node name="GoldLabel" type="Label" parent="HUD" unique_id=808720268]
-offset_left = 16.0
-offset_top = 160.0
-offset_right = 336.0
-offset_bottom = 184.0
+offset_left = 24.0
+offset_top = 264.0
+offset_right = 520.0
+offset_bottom = 304.0
 theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
 theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 20
 text = "金币: 0"
 
 [node name="ModeLabel" type="Label" parent="HUD" unique_id=1278049489]
-offset_left = 16.0
-offset_top = 188.0
-offset_right = 336.0
-offset_bottom = 212.0
+offset_left = 24.0
+offset_top = 310.0
+offset_right = 520.0
+offset_bottom = 350.0
 theme_override_colors/font_color = Color(0.6, 0.9, 0.6, 1)
 theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 20
 text = "模式: 自动 (Tab)"
 
 [node name="KeyHintsLabel" type="Label" parent="HUD" unique_id=156630009]
 anchors_preset = 1
 anchor_left = 1.0
 anchor_right = 1.0
-offset_left = -440.0
-offset_top = 16.0
-offset_right = -16.0
-offset_bottom = 40.0
+offset_left = -640.0
+offset_top = 24.0
+offset_right = -24.0
+offset_bottom = 64.0
 grow_horizontal = 0
 theme_override_colors/font_color = Color(0.8, 0.8, 0.8, 1)
 theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 20
 text = "WASD 移动 | Tab 模式 | T 天赋 | B 背包 | Esc 菜单"
 horizontal_alignment = 2
 
@@ -121,10 +130,10 @@ anchor_left = 0.5
 anchor_top = 1.0
 anchor_right = 0.5
 anchor_bottom = 1.0
-offset_left = -400.0
-offset_top = -88.0
-offset_right = 400.0
-offset_bottom = -56.0
+offset_left = -500.0
+offset_top = -110.0
+offset_right = 500.0
+offset_bottom = -70.0
 grow_horizontal = 2
 grow_vertical = 0
 theme_override_colors/font_color = Color(0.6, 1.0, 0.6, 1)
@@ -132,11 +141,11 @@ theme_override_colors/font_shadow_color = Color(0, 0, 0, 0.9)
 theme_override_constants/shadow_offset_x = 1
 theme_override_constants/shadow_offset_y = 1
 theme_override_fonts/font = SubResource("SystemFont_cjk")
-theme_override_font_sizes/font_size = 18
+theme_override_font_sizes/font_size = 20
 text = ""
 horizontal_alignment = 1
 
-[node name="GameOverPanel" type="ColorRect" parent="HUD" unique_id=1323484143]
+[node name="GameOverPanel" type="Control" parent="HUD" unique_id=1323484143]
 process_mode = 3
 visible = false
 anchors_preset = 15
@@ -144,7 +153,17 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.65)
+theme = ExtResource("8_theme")
+
+[node name="BG" type="TextureRect" parent="HUD/GameOverPanel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+texture = ExtResource("13_bg")
+stretch_mode = 6
 
 [node name="CenterBox" type="VBoxContainer" parent="HUD/GameOverPanel" unique_id=884963551]
 layout_mode = 0
@@ -158,42 +177,42 @@ alignment = 1
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.4, 0.3, 1)
 theme_override_fonts/font = SubResource("SystemFont_cjk")
-theme_override_font_sizes/font_size = 44
+theme_override_font_sizes/font_size = 56
 text = "游戏结束"
 horizontal_alignment = 1
 
 [node name="GameOverTime" type="Label" parent="HUD/GameOverPanel/CenterBox" unique_id=1848490526]
 layout_mode = 2
 theme_override_fonts/font = SubResource("SystemFont_cjk")
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 26
 text = "存活时间 00:00"
 horizontal_alignment = 1
 
 [node name="GameOverDifficulty" type="Label" parent="HUD/GameOverPanel/CenterBox"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("SystemFont_cjk")
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 24
 text = ""
 horizontal_alignment = 1
 
 [node name="GameOverKills" type="Label" parent="HUD/GameOverPanel/CenterBox"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("SystemFont_cjk")
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 24
 text = ""
 horizontal_alignment = 1
 
 [node name="GameOverWave" type="Label" parent="HUD/GameOverPanel/CenterBox"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("SystemFont_cjk")
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 24
 text = ""
 horizontal_alignment = 1
 
 [node name="GameOverLevel" type="Label" parent="HUD/GameOverPanel/CenterBox"]
 layout_mode = 2
 theme_override_fonts/font = SubResource("SystemFont_cjk")
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 24
 text = ""
 horizontal_alignment = 1
 
@@ -201,27 +220,27 @@ horizontal_alignment = 1
 layout_mode = 2
 theme_override_colors/font_color = Color(1, 0.85, 0.4, 1)
 theme_override_fonts/font = SubResource("SystemFont_cjk")
-theme_override_font_sizes/font_size = 20
+theme_override_font_sizes/font_size = 24
 text = ""
 horizontal_alignment = 1
 
 [node name="RestartButton" type="Button" parent="HUD/GameOverPanel/CenterBox" unique_id=1339673870]
-custom_minimum_size = Vector2(200, 0)
+custom_minimum_size = Vector2(260, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_fonts/font = SubResource("SystemFont_cjk")
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 26
 text = "重新开始"
 
 [node name="QuitButton" type="Button" parent="HUD/GameOverPanel/CenterBox"]
-custom_minimum_size = Vector2(200, 0)
+custom_minimum_size = Vector2(260, 0)
 layout_mode = 2
 size_flags_horizontal = 4
 theme_override_fonts/font = SubResource("SystemFont_cjk")
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 26
 text = "退出游戏"
 
-[node name="ShopPanel" type="CenterContainer" parent="HUD" unique_id=670967308]
+[node name="ShopPanel" type="Control" parent="HUD" unique_id=670967308]
 process_mode = 3
 visible = false
 anchors_preset = 15
@@ -254,7 +273,7 @@ grow_vertical = 2
 theme = ExtResource("8_theme")
 script = ExtResource("7_backpack")
 
-[node name="DifficultyPanel" type="CenterContainer" parent="HUD" unique_id=551972408]
+[node name="DifficultyPanel" type="Control" parent="HUD" unique_id=551972408]
 process_mode = 3
 visible = false
 anchors_preset = 15
@@ -265,7 +284,7 @@ grow_vertical = 2
 theme = ExtResource("8_theme")
 script = ExtResource("10_difficulty")
 
-[node name="PausePanel" type="CenterContainer" parent="HUD" unique_id=1206743379]
+[node name="PausePanel" type="Control" parent="HUD" unique_id=1206743379]
 process_mode = 3
 visible = false
 anchors_preset = 15
@@ -276,7 +295,7 @@ grow_vertical = 2
 theme = ExtResource("8_theme")
 script = ExtResource("11_pause")
 
-[node name="DebugPanel" type="CenterContainer" parent="HUD" unique_id=1234567890]
+[node name="DebugPanel" type="Control" parent="HUD" unique_id=1234567890]
 process_mode = 3
 visible = false
 anchors_preset = 15

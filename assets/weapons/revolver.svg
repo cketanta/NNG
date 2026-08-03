@@ -1,6 +1,23 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-  <circle cx="12" cy="16" r="8" fill="#7a7f88"/>
-  <circle cx="12" cy="16" r="5" fill="#4a4e55"/>
-  <circle cx="12" cy="16" r="1.5" fill="#2a2d33"/>
-  <rect x="16" y="13" width="14" height="4" rx="1" fill="#9aa0aa"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <!-- 左轮手枪：烤蓝枪身 + 转轮 -->
+  <defs>
+    <linearGradient id="blue" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5a6c8c"/>
+      <stop offset="0.5" stop-color="#2c3a52"/>
+      <stop offset="1" stop-color="#1a2436"/>
+    </linearGradient>
+    <radialGradient id="cyl" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#3d4f6e"/>
+      <stop offset="0.8" stop-color="#263347"/>
+      <stop offset="1" stop-color="#121a28"/>
+    </radialGradient>
+  </defs>
+  <rect x="52" y="40" width="36" height="16" rx="3" fill="url(#blue)" stroke="#101623" stroke-width="2.5"/>
+  <rect x="20" y="40" width="34" height="16" fill="url(#blue)" stroke="#101623" stroke-width="2.5"/>
+  <circle cx="44" cy="48" r="13" fill="url(#cyl)" stroke="#101623" stroke-width="2.5"/>
+  <circle cx="44" cy="48" r="7" fill="#161d2c" stroke="#3d4f6e" stroke-width="1.5"/>
+  <path d="M 20 52 L 36 52 L 32 78 Q 24 78 22 70 Z" fill="#3a2a14" stroke="#191006" stroke-width="2.5"/>
+  <rect x="24" y="42" width="28" height="3" rx="1.5" fill="#8fa6c8" opacity="0.55"/>
+  <rect x="54" y="42" width="26" height="2.5" rx="1.2" fill="#8fa6c8" opacity="0.5"/>
+  <rect x="84" y="36" width="3" height="8" rx="1" fill="#8fa6c8"/>
 </svg>

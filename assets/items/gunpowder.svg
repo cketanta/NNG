@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 动能火药：紫黑火药桶 -->
+  <defs><linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a5ce0"/><stop offset="1" stop-color="#3a1a6a"/></linearGradient></defs>
+  <rect x="14" y="12" width="20" height="26" rx="4" fill="url(#b)" stroke="#1a0a3a" stroke-width="2"/>
+  <rect x="12" y="10" width="24" height="5" rx="2" fill="#6a34b0" stroke="#1a0a3a" stroke-width="2"/>
+  <rect x="21" y="20" width="6" height="4" fill="#1a0a3a"/>
+  <circle cx="24" cy="34" r="4" fill="#ffd95a"/>
+</svg>

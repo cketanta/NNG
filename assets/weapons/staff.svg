@@ -1,7 +1,24 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
-  <!-- 法杖：灰蓝杖身 + 右端蓝色发光宝石 -->
-  <rect x="6" y="21" width="30" height="6" rx="3" fill="#7a8ca0"/>
-  <circle cx="6" cy="24" r="5" fill="#5a6b80"/>
-  <polygon points="36,24 42,14 44,24 42,34" fill="#3f8cff"/>
-  <polygon points="38.5,24 42,18 43,24 42,30" fill="#9fd0ff"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="96" height="96" viewBox="0 0 96 96">
+  <!-- 法杖：杖身渐变 + 能量法球 + 宝石发光 -->
+  <defs>
+    <linearGradient id="wood" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8a6a4a"/>
+      <stop offset="1" stop-color="#4a3520"/>
+    </linearGradient>
+    <radialGradient id="orb" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#e0f0ff"/>
+      <stop offset="0.4" stop-color="#7ab8ff"/>
+      <stop offset="1" stop-color="#2a6ac0"/>
+    </radialGradient>
+    <radialGradient id="glow" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#7ab8ff" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#7ab8ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <ellipse cx="72" cy="30" rx="26" ry="26" fill="url(#glow)"/>
+  <rect x="20" y="48" width="56" height="10" rx="5" fill="url(#wood)" stroke="#2a1a08" stroke-width="2"/>
+  <circle cx="20" cy="53" r="12" fill="#5a3a20" stroke="#2a1a08" stroke-width="2"/>
+  <polygon points="72,30 84,14 88,30 84,46" fill="url(#orb)" stroke="#1a4a90" stroke-width="2"/>
+  <polygon points="76,30 82,22 83.5,30 82,38" fill="#e0f0ff" opacity="0.9"/>
+  <circle cx="72" cy="53" r="6" fill="#7ab8ff" opacity="0.5"/>
 </svg>

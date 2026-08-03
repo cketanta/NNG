@@ -27,9 +27,12 @@ var _firing := true
 var _timer := 0.0
 
 # --- 天赋状态（由 _apply_talents 每帧重算） ---
-var _bullet_count := 1      # 每次开火连射弹数（弹匣扩容）
+var _bullet_count := 1      # 每次开火连射弹数（弹匣扩容 + 人物连珠）
 var _homing_deg := 0.0      # 每帧子弹转向角度（枪斗术 / 智能制导）
 var _has_spinner := false   # 转盘枪手
+var _crit_chance := 0.0     # 暴击率（%，人物锐眼）
+var _crit_dmg := 0.0        # 暴击额外伤害（%，人物致命一击）
+var _lifesteal := 0.0       # 吸血比例（%，人物血之渴望）
 
 # --- 转盘枪手特殊攻击状态 ---
 var _spinner_active := false
@@ -89,38 +92,30 @@ func _player() -> Node2D:
 func set_talent_tree(tree: TalentTree) -> void:
 	talent_tree = tree
 
-## 从本武器天赋树 + 人物天赋重算终值。
+## 从本武器天赋树 + 人物天赋 + 道具重算终值。
 func _apply_talents() -> void:
 	var tree: TalentTree = talent_tree if talent_tree != null else TalentTree.new()
-	var owned_ids: Array = tree.owned_ids("revolver")
-	var dmg_mult := 1.0
-	var cd_mult := 1.0
-	_bullet_count = 1
-	_homing_deg = 0.0
-	_has_spinner = false
-	# 弹头改良1~4：每级 +10% 攻击
-	dmg_mult *= 1.0 + 0.1 * _count_owned(owned_ids, "rev_bullet_")
-	# 快枪手1~4：每级攻速 +10%（冷却 ×0.9）
-	cd_mult *= pow(0.9, _count_owned(owned_ids, "rev_quick_"))
-	# 弹匣扩容1~4：每级额外连射一发子弹
-	_bullet_count += _count_owned(owned_ids, "rev_mag_")
-	# 转盘枪手 / 枪斗术 / 智能制导
-	_has_spinner = "rev_spinner" in owned_ids
-	if "rev_homing_1" in owned_ids:
-		_homing_deg = 0.5  # 微弱追踪
-	if "rev_homing_2" in owned_ids:
+	var agg: Dictionary = tree.aggregate("revolver")
+	var person: Dictionary = _player().player_talent.effects()
+	var item: Dictionary = _player().weapon_item_effects(false)
+	# 倍率 = 武器树 × 人物树 × 道具（远程组）。
+	var dmg_mult: float = agg.dmg_mult * person.dmg_mult * item.dmg_mult
+	var cd_mult: float = agg.cd_mult * person.cd_mult * item.cd_mult
+	# 弹匣扩容 + 人物连珠（远程额外弹）。
+	_bullet_count = 1 + int(agg.counts.get("bullet", 0)) + int(person.counts.get("extra_projectile", 0))
+	# 转盘枪手 / 枪斗术 / 智能制导。
+	_has_spinner = bool(agg.flags.get("spinner", false))
+	if bool(agg.flags.get("homing_strong", false)):
 		_homing_deg = 2.0  # 追踪增强
-	# 人物天赋（迅捷攻速 / 狂力伤害）叠加。
-	var pt: PlayerTalent = _player().player_talent
-	damage = maxi(1, int(round(base_damage * dmg_mult * pow(1.1, pt.owned_count("damage")))))
-	cooldown = base_cooldown * cd_mult * pow(0.92, pt.owned_count("attack_speed"))
-
-func _count_owned(owned_ids: Array, prefix: String) -> int:
-	var count := 0
-	for id in owned_ids:
-		if id.begins_with(prefix):
-			count += 1
-	return count
+	elif bool(agg.flags.get("homing_weak", false)):
+		_homing_deg = 0.5  # 微弱追踪
+	# 人物暴击/吸血。
+	_crit_chance = person.crit_chance
+	_crit_dmg = person.crit_dmg
+	_lifesteal = person.lifesteal
+	damage = maxi(1, int(round((base_damage + item.dmg_flat) * dmg_mult)))
+	cooldown = base_cooldown * cd_mult
+	projectile_speed = base_projectile_speed + item.speed_bonus
 
 func fire() -> void:
 	# 触发一次连射序列（弹匣扩容决定连发弹数）。
@@ -133,18 +128,16 @@ func _fire_bullet(dir: Vector2) -> void:
 	bullet.set_visual_type("revolver")
 	if _homing_deg > 0.0:
 		bullet.set_homing(_homing_deg)
+	bullet.set_crit(_crit_chance, _crit_dmg)
+	bullet.set_lifesteal(_lifesteal)
 	bullet.global_position = global_position  # 发射中心 = 玩家自身
 	get_tree().current_scene.add_child(bullet)
 
 func _unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("special_attack") and _has_spinner and not _spinner_active and _is_active():
+	# 转盘枪手：右键触发（AUTO/MANUAL 均生效）。修复 v1.3 依赖不存在的 active_attack_id 导致无法触发。
+	if event.is_action_pressed("special_attack") and _has_spinner and not _spinner_active:
 		start_spinner()
 		get_viewport().set_input_as_handled()
-
-## 是否为当前激活的攻击方式。
-func _is_active() -> bool:
-	var wm := _player().get_node_or_null("WeaponManager")
-	return wm != null and wm.active_attack_id == weapon_id
 
 ## 转盘枪手：扔出手枪到鼠标右键位置，手枪旋转攻击一周后收回。
 func start_spinner() -> void:

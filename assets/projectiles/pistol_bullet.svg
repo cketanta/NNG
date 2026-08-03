@@ -1,3 +1,17 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 12 12">
-  <circle cx="6" cy="6" r="5" fill="#ffd95a"/>
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 破旧手枪弹：金黄渐变光弹 + 光晕 -->
+  <defs>
+    <radialGradient id="b" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#fff6cc"/>
+      <stop offset="0.5" stop-color="#ffd95a"/>
+      <stop offset="1" stop-color="#c8961a"/>
+    </radialGradient>
+    <radialGradient id="g" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#ffd95a" stop-opacity="0.4"/>
+      <stop offset="1" stop-color="#ffd95a" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <circle cx="22" cy="24" r="16" fill="url(#g)"/>
+  <circle cx="24" cy="24" r="10" fill="url(#b)" stroke="#8a5f10" stroke-width="1.5"/>
+  <path d="M 10 24 L 2 22 L 4 26 Z" fill="#ffd95a" opacity="0.6"/>
 </svg>

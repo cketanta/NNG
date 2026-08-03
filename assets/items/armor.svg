@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 劣质盔甲：灰胸甲 -->
+  <defs><linearGradient id="b" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#aab2c0"/><stop offset="1" stop-color="#4a5260"/></linearGradient></defs>
+  <path d="M 24 8 L 38 12 L 36 26 Q 32 38 24 42 Q 16 38 12 26 L 10 12 Z" fill="url(#b)" stroke="#2a3038" stroke-width="2"/>
+  <path d="M 24 8 L 24 42" stroke="#2a3038" stroke-width="2"/>
+  <path d="M 24 16 L 34 20" stroke="#ffffff" stroke-width="2" opacity="0.35"/>
+  <circle cx="24" cy="12" r="2.5" fill="#2a3038"/>
+</svg>

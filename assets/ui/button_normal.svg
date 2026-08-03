@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 按钮 normal（9-patch，texture_margin 12）：暗蓝渐变 + 细边框 -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1e2a38" stop-opacity="0.98"/>
+      <stop offset="1" stop-color="#111721" stop-opacity="0.98"/>
+    </linearGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#48607c" stop-opacity="0.95"/>
+      <stop offset="1" stop-color="#2a3a4d" stop-opacity="0.95"/>
+    </linearGradient>
+  </defs>
+  <rect x="1" y="1" width="46" height="46" rx="9" fill="url(#bg)"/>
+  <rect x="1.5" y="1.5" width="45" height="45" rx="8" fill="none" stroke="url(#edge)" stroke-width="1.3"/>
+  <rect x="5" y="3" width="38" height="2" rx="1" fill="#6f94c0" opacity="0.4"/>
+</svg>

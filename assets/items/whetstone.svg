@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 磨刀石：紫磨石 -->
+  <defs><linearGradient id="b" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#c8a0e8"/><stop offset="1" stop-color="#6a34a0"/></linearGradient></defs>
+  <path d="M 12 34 L 18 14 L 36 18 L 30 38 Z" fill="url(#b)" stroke="#2a1040" stroke-width="2"/>
+  <path d="M 16 26 L 32 30" stroke="#e0c8f0" stroke-width="2" opacity="0.7"/>
+  <path d="M 14 20 L 30 24" stroke="#e0c8f0" stroke-width="2" opacity="0.5"/>
+</svg>

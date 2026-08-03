@@ -6,23 +6,23 @@ var _main: Main
 var _gold_label: Label
 var _stats_label: Label
 var _weapons_box: VBoxContainer  # 武器列
-var _items_box: VBoxContainer    # 道具列
+var _items_box: GridContainer    # 道具列（2 列网格）
 
 func setup(main: Main) -> void:
 	_main = main
 	_build_ui()
 
 func _build_ui() -> void:
-	var bg := PanelContainer.new()
+	var bg := Control.new()
 	bg.set_anchors_preset(Control.PRESET_FULL_RECT)
-	bg.add_theme_stylebox_override("panel", UiStyle.panel(Color(0.04, 0.05, 0.08, 0.96), Color(0.3, 0.38, 0.5, 0.9), 0, 2))
 	add_child(bg)
+	bg.add_child(UiStyle.fullscreen_bg())  # 底层全屏背景贴图
 	var margin := MarginContainer.new()
 	margin.set_anchors_preset(Control.PRESET_FULL_RECT)
-	margin.add_theme_constant_override("margin_left", 32)
-	margin.add_theme_constant_override("margin_top", 20)
-	margin.add_theme_constant_override("margin_right", 32)
-	margin.add_theme_constant_override("margin_bottom", 20)
+	margin.add_theme_constant_override("margin_left", 28)
+	margin.add_theme_constant_override("margin_top", 16)
+	margin.add_theme_constant_override("margin_right", 28)
+	margin.add_theme_constant_override("margin_bottom", 16)
 	bg.add_child(margin)
 	var vbox := VBoxContainer.new()
 	margin.add_child(vbox)
@@ -75,7 +75,10 @@ func _make_items_box() -> Control:
 	var v := VBoxContainer.new()
 	box.add_child(v)
 	v.add_child(_make_section_title("道具"))
-	_items_box = VBoxContainer.new()
+	_items_box = GridContainer.new()  # 道具卡片 2 列网格（规整矩形）
+	_items_box.columns = 2
+	_items_box.add_theme_constant_override("h_separation", 8)
+	_items_box.add_theme_constant_override("v_separation", 8)
 	v.add_child(_items_box)
 	return box
 
@@ -94,7 +97,8 @@ func _rebuild_weapons() -> void:
 		_weapons_box.add_child(UiStyle.card_label("暂无武器（商店购买）"))
 		return
 	for slot in slots:
-		_weapons_box.add_child(UiStyle.card_label("%s  Lv.%d" % [_main.weapon_name(slot.id), slot.level]))
+		_weapons_box.add_child(UiStyle.card_label("%s  Lv.%d（天赋点 %d）" % [
+			_main.weapon_name(slot.id), slot.level, slot.tree.points]))
 
 ## 道具列：已拥有道具卡片（保留显示）。
 func _rebuild_items() -> void:
@@ -109,13 +113,21 @@ func _rebuild_items() -> void:
 		return
 	for item_id in owned:
 		var card := UiStyle.item_card()
+		card.custom_minimum_size = Vector2(220, 0)  # 规整矩形卡片
 		var v := VBoxContainer.new()
+		v.add_theme_constant_override("separation", 4)
 		card.add_child(v)
+		v.add_child(UiStyle.item_icon(ItemDefs.icon(item_id), 32))
 		var count: int = _main.player.item_counts.get(item_id, 0)
-		v.add_child(UiStyle.card_label("[%s] %s ×%d" % [
+		var name_label := UiStyle.card_label("[%s] %s ×%d" % [
 			ItemDefs.rarity_name(item_id), ItemDefs.name(item_id), count],
-			ItemDefs.rarity_color(item_id)))
-		v.add_child(UiStyle.card_label(ItemDefs.desc(item_id)))
+			ItemDefs.rarity_color(item_id))
+		name_label.add_theme_font_size_override("font_size", 13)
+		v.add_child(name_label)
+		var desc_label := UiStyle.card_label(ItemDefs.desc(item_id))
+		desc_label.add_theme_font_size_override("font_size", 12)
+		desc_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		v.add_child(desc_label)
 		_items_box.add_child(card)
 
 func _on_close_pressed() -> void:

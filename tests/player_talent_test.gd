@@ -1,5 +1,5 @@
 extends SceneTree
-## 人物天赋测试：4 分支线性加点、效果倍率（移速）、分支点满后不可再点。
+## 人物天赋测试（树状）：加点/前置/互斥、效果聚合（伤害倍率/移速/生命上限）。
 
 var _frames := 0
 var _failures: Array[String] = []
@@ -18,28 +18,59 @@ func _process(_delta: float) -> bool:
 	if _frames == 1:
 		_main.start_with_weapon("pistol")
 		var pt = _player.get("player_talent")
-		pt.points = 10
-		# 疾跑 2 级 → 移速倍率 1.2。
-		if _main.unlock_personal_talent("move_speed") and _main.unlock_personal_talent("move_speed"):
-			print("[OK] move_speed x2 unlocked")
+		pt.points = 20
+		# 前置锁：未点 person_range 时 person_range_2 不可选。
+		if not pt.tree.selectable("player").has("person_range_2"):
+			print("[OK] range_2 locked until range_1 owned")
 		else:
-			_failures.append("move_speed unlock failed")
-		if absf(_player.get("move_speed_mult") - 1.2) < 0.001:
-			print("[OK] move_speed_mult = 1.2")
+			_failures.append("person_range_2 selectable without prereq")
+		# 疾跑 + 蛮力：移速倍率 1.1、伤害倍率 1.1。
+		if not _main.unlock_personal_talent("person_sprint"):
+			_failures.append("sprint unlock failed")
+		if not _main.unlock_personal_talent("person_brute"):
+			_failures.append("brute unlock failed")
+		if absf(_player.get("move_speed_mult") - 1.1) < 0.001:
+			print("[OK] sprint -> move_speed_mult = 1.1")
 		else:
 			_failures.append("move_speed_mult=%f" % _player.get("move_speed_mult"))
-		# 分支可点满 5 级，满后不可再点。
-		for i in range(5):
-			if not _main.unlock_personal_talent("damage"):
-				_failures.append("damage unlock %d failed" % i)
-		if pt.owned_count("damage") == 5:
-			print("[OK] damage branch maxed (5/5)")
+		var fx: Dictionary = pt.effects()
+		if absf(fx.dmg_mult - 1.1) < 0.001:
+			print("[OK] brute -> dmg_mult = 1.1")
 		else:
-			_failures.append("damage owned=%d" % pt.owned_count("damage"))
-		if not _main.unlock_personal_talent("damage"):
-			print("[OK] maxed branch cannot unlock further")
+			_failures.append("dmg_mult=%f" % fx.dmg_mult)
+		# 力量链加满：1.1 × 1.1 × 1.15 = 1.3915。
+		if not _main.unlock_personal_talent("person_brute_2"):
+			_failures.append("brute_2 unlock failed")
+		if not _main.unlock_personal_talent("person_brute_3"):
+			_failures.append("brute_3 unlock failed")
+		fx = pt.effects()
+		if absf(fx.dmg_mult - 1.3915) < 0.001:
+			print("[OK] power chain -> dmg_mult = 1.3915")
 		else:
-			_failures.append("maxed branch unlocked again")
+			_failures.append("power chain dmg_mult=%f" % fx.dmg_mult)
+		# 坚韧：生命上限 +20 -> max_hp 120。
+		if not _main.unlock_personal_talent("person_vitality"):
+			_failures.append("vitality unlock failed")
+		if _player.get("max_hp") == 120:
+			print("[OK] vitality -> max_hp = 120")
+		else:
+			_failures.append("max_hp=%d" % _player.get("max_hp"))
+		# 互斥：点满攻速链后连珠可选；随后点锐眼（与连珠互斥）应失败。
+		if not _main.unlock_personal_talent("person_haste"):
+			_failures.append("haste unlock failed")
+		if not _main.unlock_personal_talent("person_haste_2"):
+			_failures.append("haste_2 unlock failed")
+		if not _main.unlock_personal_talent("person_extra"):
+			_failures.append("extra (连珠) unlock failed")
+		if _main.unlock_personal_talent("person_crit"):
+			_failures.append("crit unlocked despite conflict with extra")
+		else:
+			print("[OK] crit conflicts with extra (连珠/暴击流二选一)")
+		# 人物树点数扣减正确：sprint/brute/brute_2/brute_3/vitality/haste/haste_2/extra 共解锁 8 次 → 剩 12。
+		if pt.points == 12:
+			print("[OK] points deducted correctly (%d)" % pt.points)
+		else:
+			_failures.append("points=%d" % pt.points)
 		_finish()
 		return true
 	return false

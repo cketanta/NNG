@@ -39,16 +39,16 @@ func _process(_delta: float) -> bool:
 			print("[OK] backpack shows player stats")
 		else:
 			_failures.append("stats label '%s'" % backpack._stats_label.text)
-		# 武器区：显示名称与等级，不含天赋。
+		# 武器区：显示名称、等级与天赋点数（v1.4 起背包展示武器天赋点信息）。
 		var weapons_text := _gather_text(backpack._weapons_box)
 		if "破旧手枪" in weapons_text and "Lv.1" in weapons_text:
 			print("[OK] backpack lists weapon with level")
 		else:
 			_failures.append("weapons text '%s'" % weapons_text)
-		if not "天赋" in weapons_text:
-			print("[OK] backpack weapon area has no talent")
+		if "天赋点" in weapons_text:
+			print("[OK] backpack shows weapon talent points")
 		else:
-			_failures.append("backpack shows weapon talent")
+			_failures.append("backpack weapon area missing talent points")
 		# 道具区：显示已购道具 ×数量。
 		var items_text := _gather_text(backpack._items_box)
 		if "跑鞋" in items_text and "×1" in items_text:

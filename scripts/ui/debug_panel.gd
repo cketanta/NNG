@@ -1,5 +1,5 @@
 class_name DebugPanel
-extends CenterContainer
+extends Control
 ## 测试模式调试面板（L 键唤出，游戏暂停）：
 ## 可调 当前波数 / 金币 / 角色等级 / 角色属性（移速/防御/血量/幸运）/ 武器等级，
 ## 道具区可无限 +1 获取所有道具。整体包 ScrollContainer 纵向滚动。
@@ -18,11 +18,15 @@ func setup(main: Main) -> void:
 	_build_ui()
 
 func _build_ui() -> void:
+	add_child(UiStyle.fullscreen_bg())  # 底层全屏背景贴图
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(center)
 	# 整体滚动容器：内容超高时纵向滑动。
 	var scroll := ScrollContainer.new()
-	scroll.custom_minimum_size = Vector2(700, 480)
+	scroll.custom_minimum_size = Vector2(960, 640)
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	add_child(scroll)
+	center.add_child(scroll)
 
 	var panel := PanelContainer.new()
 	scroll.add_child(panel)
@@ -57,7 +61,7 @@ func _build_ui() -> void:
 
 	# --- 武器调试（测试加减） ---
 	vbox.add_child(UiStyle.title_bar("武器（测试加减）"))
-	for weapon_id in ["pistol", "blade", "revolver"]:
+	for weapon_id in ["pistol"] + _main.weapon_ids():
 		var weapon_row := HBoxContainer.new()
 		var name_label := Label.new()
 		name_label.text = _main.weapon_name(weapon_id)

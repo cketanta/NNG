@@ -1,5 +1,5 @@
 class_name PausePanel
-extends CenterContainer
+extends Control
 ## 战斗中 Esc 唤出的暂停菜单：继续 / 重新开始 / 退出游戏。显示时游戏暂停。
 
 var _main: Main
@@ -10,10 +10,14 @@ func setup(main: Main) -> void:
 	_build_ui()
 
 func _build_ui() -> void:
+	add_child(UiStyle.fullscreen_bg())  # 底层全屏背景贴图
+	var center := CenterContainer.new()
+	center.set_anchors_preset(Control.PRESET_FULL_RECT)
+	add_child(center)
 	var panel := PanelContainer.new()
 	var vbox := VBoxContainer.new()
 	panel.add_child(vbox)
-	add_child(panel)
+	center.add_child(panel)
 
 	vbox.add_child(_make_title("暂停"))
 	_info_label = Label.new()

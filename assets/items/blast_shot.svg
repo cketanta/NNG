@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48">
+  <!-- 爆破弹：灰弹 + 引信 -->
+  <defs><radialGradient id="b" cx="0.5" cy="0.5" r="0.5"><stop offset="0" stop-color="#aab0ba"/><stop offset="1" stop-color="#3a3f47"/></radialGradient></defs>
+  <circle cx="24" cy="28" r="13" fill="url(#b)" stroke="#14181e" stroke-width="2"/>
+  <path d="M 24 15 L 20 6 L 26 8 Z" fill="#8a5a20" stroke="#3a2408" stroke-width="1.5"/>
+  <rect x="24" y="24" width="7" height="8" fill="#1a1d24"/>
+  <circle cx="24" cy="28" r="2" fill="#c8ccd4"/>
+</svg>
