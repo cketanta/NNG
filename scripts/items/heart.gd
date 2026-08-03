@@ -27,7 +27,8 @@ func _process(delta: float) -> void:
 		return
 	var to_player := player.global_position - global_position
 	var dist := to_player.length()
-	if dist < MAGNET_RADIUS:
+	# 磁吸范围随玩家等级提升（每级 +10，越强拾取越轻松）。
+	if dist < MAGNET_RADIUS + player.level * 10.0:
 		_magnet_speed = lerpf(_magnet_speed, MAX_SPEED, delta * 8.0)
 		var step := _magnet_speed * delta
 		if dist <= maxf(step, PICKUP_DISTANCE):

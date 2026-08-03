@@ -29,8 +29,11 @@ var _timer := 0.0
 # --- 天赋状态（由 _apply_talents 每帧重算） ---
 var _pierce := 0            # 每趟额外穿透数（贯穿刃 + 人物贯穿）
 var _max_trips := 1         # 往返趟数（二段往返 +1）
-var _extra_boomerang := 0   # 额外镖数（双镖）
+var _extra_boomerang := 0   # 额外镖数（双镖/多镖）
 var _whirlwind := false     # 绞杀旋涡：折返时命中数翻倍
+var _whirl_tier := 0        # 旋涡强化：额外命中数
+var _magnet := 0            # 磁吸：飞行吸附附近敌人
+var _armor_break := false   # 破甲：命中削弱敌人防御
 var _crit_chance := 0.0     # 暴击率（%）
 var _crit_dmg := 0.0        # 暴击额外伤害（%）
 var _lifesteal := 0.0       # 吸血比例（%）
@@ -84,9 +87,17 @@ func _apply_talents() -> void:
 	_max_trips = 1 + int(agg.counts.get("return", 0))
 	_extra_boomerang = int(agg.counts.get("boomerang", 0))
 	_whirlwind = bool(agg.flags.get("whirlwind", false))
-	_crit_chance = person.crit_chance
-	_crit_dmg = person.crit_dmg
-	_lifesteal = person.lifesteal
+	_whirl_tier = int(agg.counts.get("whirl", 0))
+	_magnet = int(agg.counts.get("magnet", 0)) + (1 if agg.flags.get("magnet", false) else 0)
+	_armor_break = bool(agg.flags.get("armor_break", false))
+	_crit_chance = agg.crit_chance + person.crit_chance + item.crit_chance
+	_crit_dmg = agg.crit_dmg + person.crit_dmg + item.crit_dmg
+	_lifesteal = person.lifesteal + item.lifesteal
+	# 刃舞身法：闪避/移速上报玩家。
+	if agg.dodge > 0:
+		_player().apply_weapon_dodge(agg.dodge)
+	if agg.speed_mult > 1.0:
+		_player().apply_weapon_speed_mult(agg.speed_mult)
 	damage = maxi(1, int(round((base_damage + item.dmg_flat) * dmg_mult)))
 	cooldown = base_cooldown * cd_mult
 	projectile_speed = base_projectile_speed + item.speed_bonus
@@ -103,7 +114,8 @@ func fire() -> void:
 		get_tree().current_scene.add_child(boom)
 		boom.global_position = global_position
 		boom.setup(dir, projectile_speed, damage, base_out_distance, _max_trips,
-			_pierce, _whirlwind, _crit_chance, _crit_dmg, _lifesteal)
+			_pierce, _whirlwind, _crit_chance, _crit_dmg, _lifesteal,
+			_whirl_tier, _magnet, _armor_break)
 
 func _draw() -> void:
 	if _texture == null:

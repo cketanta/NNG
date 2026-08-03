@@ -35,6 +35,10 @@ var _focus := false         # 凝光天赋：散射更集中
 var _crit_chance := 0.0     # 暴击率（%）
 var _crit_dmg := 0.0        # 暴击额外伤害（%）
 var _lifesteal := 0.0       # 吸血比例（%）
+var _slow_tier := 0         # 命中减速层级（冰霜/冰元素）
+var _freeze_tier := 0       # 命中冻结层级（冰霜）
+var _chain := 0             # 命中弹射次数（闪电连锁/雷元素）
+var _burn_tier := 0         # 命中点燃层级（火元素）
 
 func set_aim_direction(dir: Vector2) -> void:
 	_aim_dir = dir.normalized()
@@ -75,13 +79,23 @@ func _apply_talents() -> void:
 	var item: Dictionary = _player().weapon_item_effects(false)
 	var dmg_mult: float = agg.dmg_mult * person.dmg_mult * item.dmg_mult
 	var cd_mult: float = agg.cd_mult * person.cd_mult * item.cd_mult
-	_bullet_count = 1 + int(agg.counts.get("projectile", 0)) + int(person.counts.get("extra_projectile", 0))
-	_pierce = int(agg.counts.get("pierce", 0)) + int(person.counts.get("pierce", 0))
+	_bullet_count = 1 + int(agg.counts.get("projectile", 0)) + int(person.counts.get("extra_projectile", 0)) + int(agg.counts.get("extra_projectile", 0))
+	_pierce = int(agg.counts.get("pierce", 0)) + int(person.counts.get("pierce", 0)) + int(item.pierce)
 	_explode = bool(agg.flags.get("explode", false))
 	_focus = bool(agg.flags.get("focus", false))
-	_crit_chance = person.crit_chance
-	_crit_dmg = person.crit_dmg
-	_lifesteal = person.lifesteal
+	_crit_chance = agg.crit_chance + person.crit_chance + item.crit_chance
+	_crit_dmg = agg.crit_dmg + person.crit_dmg + item.crit_dmg
+	_lifesteal = person.lifesteal + item.lifesteal
+	# 元素/冰霜/闪电：命中施加状态（含道具）。
+	_slow_tier = (1 if agg.flags.get("slow", false) else 0) + int(agg.counts.get("slow_tier", 0))
+	_freeze_tier = (1 if agg.flags.get("freeze", false) else 0) + int(agg.counts.get("freeze_tier", 0))
+	_chain = int(agg.counts.get("chain", 0)) + (1 if agg.flags.get("chain", false) else 0)
+	_burn_tier = (1 if agg.flags.get("burn", false) else 0) + int(item.burn_tier)
+	# 奥术护盾：防御/闪避上报玩家。
+	if agg.defense > 0:
+		_player().apply_weapon_defense(int(agg.defense))
+	if agg.dodge > 0:
+		_player().apply_weapon_dodge(agg.dodge)
 	damage = maxi(1, int(round((base_damage + item.dmg_flat) * dmg_mult)))
 	cooldown = base_cooldown * cd_mult
 	projectile_speed = base_projectile_speed + item.speed_bonus
@@ -110,6 +124,15 @@ func fire() -> void:
 			projectile.set_pierce(_pierce)
 		if _explode:
 			projectile.set_explode(maxi(1, damage))  # 爆裂：命中爆炸伤害 = 本弹伤害
+		# 元素/冰霜/闪电命中状态。
+		if _slow_tier > 0:
+			projectile.set_slow(_slow_tier)
+		if _freeze_tier > 0:
+			projectile.set_freeze(_freeze_tier)
+		if _chain > 0:
+			projectile.set_chain(_chain)
+		if _burn_tier > 0:
+			projectile.set_burn(_burn_tier)
 		projectile.global_position = global_position + dir * 30.0  # 从武器枪口处发射
 		get_tree().current_scene.add_child(projectile)
 

@@ -6,6 +6,7 @@ extends CanvasLayer
 @onready var kills_label: Label = $KillsLabel
 @onready var time_label: Label = $TimeLabel
 @onready var wave_label: Label = $WaveLabel
+@onready var wave_timer_label: Label = $WaveTimerLabel
 @onready var xp_bar: ProgressBar = $XPBar
 @onready var xp_label: Label = $XPLabel
 @onready var gold_label: Label = $GoldLabel
@@ -96,6 +97,10 @@ func update_time(seconds: float) -> void:
 func update_wave(wave: int) -> void:
 	wave_label.text = "第 %d 波" % wave
 
+## 当前波剩余时间（秒），倒计时显示。
+func update_wave_timer(remaining: float) -> void:
+	wave_timer_label.text = "本波剩余 %d 秒" % int(ceil(maxf(remaining, 0.0)))
+
 func update_xp(current: int, xp_max: int) -> void:
 	xp_bar.max_value = xp_max
 	xp_bar.value = current
@@ -143,7 +148,8 @@ func _play_result_intro() -> void:
 	var delay := 0.0
 	for l in labels:
 		l.modulate.a = 0.0
-		var tw2: Tween = create_tween().set_delay(delay)
+		var tw2: Tween = create_tween()
+		tw2.tween_interval(delay)  # 延迟逐条浮现（Godot 4 Tween 无 set_delay）
 		tw2.tween_property(l, "modulate:a", 1.0, 0.25)
 		delay += 0.12
 

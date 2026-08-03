@@ -43,9 +43,10 @@ var _air_blade_count := 0  # 弧形气刃数量（气刃斩 + 气刃专精1~4）
 var _grand_slash := false  # 气刃大回旋：额外环形气刃波
 var _bleed_on_hit := false # 致残：命中附加流血
 var _bleed_max := 0        # 流血上限（致残 30 / 郁色创伤 50；0 表示不触发流血）
-var _crit_chance := 0.0    # 暴击率（%，人物锐眼）
-var _crit_dmg := 0.0       # 暴击额外伤害（%，人物致命一击）
+var _crit_chance := 0.0    # 暴击率（%，人物+武器天赋）
+var _crit_dmg := 0.0       # 暴击额外伤害（%）
 var _lifesteal := 0.0      # 吸血比例（%，人物血之渴望）
+var _slow_tier := 0        # 斩击减速层级（斩肌/断筋/致残斩）
 
 func set_aim_direction(dir: Vector2) -> void:
 	_aim_dir = dir.normalized()
@@ -115,10 +116,17 @@ func _apply_talents() -> void:
 	_grand_slash = false
 	_bleed_on_hit = false
 	_bleed_max = 0
-	# 人物暴击/吸血（作用于挥砍与气刃）。
-	_crit_chance = person.crit_chance
-	_crit_dmg = person.crit_dmg
-	_lifesteal = person.lifesteal
+	# 暴击/吸血（人物 + 武器天赋 + 道具，作用于挥砍与气刃）。
+	_crit_chance = agg.crit_chance + person.crit_chance + item.crit_chance
+	_crit_dmg = agg.crit_dmg + person.crit_dmg + item.crit_dmg
+	_lifesteal = person.lifesteal + item.lifesteal
+	# 斩击减速：命中减速敌人。
+	_slow_tier = int(agg.counts.get("slow_tier", 0)) + (1 if agg.flags.get("slow", false) else 0)
+	# 剑术防御/身法：上报到玩家（防御/闪避，多把武器取最大）。
+	if agg.defense > 0:
+		_player().apply_weapon_defense(int(agg.defense))
+	if agg.dodge > 0:
+		_player().apply_weapon_dodge(agg.dodge)
 	# 气刃斩本身 +1；气刃专精1~4 每项再 +1（聚合 counts）。
 	_air_blade_count = int(agg.counts.get("air_blade", 0))
 	# 气刃大回旋。
@@ -132,10 +140,10 @@ func _apply_talents() -> void:
 	if bool(agg.flags.get("combo_4", false)): _combo_count = 4
 	elif bool(agg.flags.get("combo_3", false)): _combo_count = 3
 	elif bool(agg.flags.get("combo_2", false)): _combo_count = 2
-	# 致残：命中附加流血（上限 30）；郁色创伤：上限再 +20 → 50。
-	if bool(agg.flags.get("bleed", false)):
+	# 致残：命中附加流血（上限 30）；郁色创伤/道具链锯/锯齿刃：上限提升。
+	if bool(agg.flags.get("bleed", false)) or item.bleed > 0:
 		_bleed_on_hit = true
-		_bleed_max = int(agg.counts.get("bleed_max", 0))
+		_bleed_max = int(agg.counts.get("bleed_max", 0)) + int(item.bleed_max)
 	damage = maxi(1, int(round((base_damage + item.dmg_flat) * dmg_mult)))
 	cooldown = base_cooldown * cd_mult
 	melee_range = base_range * range_mult
@@ -217,6 +225,8 @@ func _on_zone_body_entered(body: Node2D, dmg: int) -> void:
 			_player().heal(maxi(1, int(round(real_dmg * _lifesteal / 100.0))))
 		if _bleed_on_hit and body.has_method("add_bleed"):
 			body.add_bleed(1)  # 致残：命中叠加流血
+		if _slow_tier > 0 and body.has_method("add_slow"):
+			body.add_slow(_slow_tier)  # 斩肌/断筋/致残斩：命中减速
 
 ## 凸扇环多边形（弧角必须 < 180°），朝 +X 方向，用于命中区与视觉。
 func _sector_points(inner_radius: float, outer_radius: float, arc: float) -> PackedVector2Array:

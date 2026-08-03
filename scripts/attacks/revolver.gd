@@ -30,9 +30,14 @@ var _timer := 0.0
 var _bullet_count := 1      # 每次开火连射弹数（弹匣扩容 + 人物连珠）
 var _homing_deg := 0.0      # 每帧子弹转向角度（枪斗术 / 智能制导）
 var _has_spinner := false   # 转盘枪手
-var _crit_chance := 0.0     # 暴击率（%，人物锐眼）
-var _crit_dmg := 0.0        # 暴击额外伤害（%，人物致命一击）
+var _crit_chance := 0.0     # 暴击率（%，人物+武器天赋）
+var _crit_dmg := 0.0        # 暴击额外伤害（%）
 var _lifesteal := 0.0       # 吸血比例（%，人物血之渴望）
+var _burn_tier := 0         # 燃烧层级（燃烧弹：0=不点燃）
+var _pierce := 0            # 子弹穿透数（穿甲弹/狙击/人物贯穿）
+var _spin_extra := 0        # 转盘额外弹数（转盘扩容）
+var _spin_dmg := 0          # 转盘伤害层级（转盘重锤）
+var _spin_dual := false     # 双转盘
 
 # --- 转盘枪手特殊攻击状态 ---
 var _spinner_active := false
@@ -101,18 +106,27 @@ func _apply_talents() -> void:
 	# 倍率 = 武器树 × 人物树 × 道具（远程组）。
 	var dmg_mult: float = agg.dmg_mult * person.dmg_mult * item.dmg_mult
 	var cd_mult: float = agg.cd_mult * person.cd_mult * item.cd_mult
-	# 弹匣扩容 + 人物连珠（远程额外弹）。
-	_bullet_count = 1 + int(agg.counts.get("bullet", 0)) + int(person.counts.get("extra_projectile", 0))
-	# 转盘枪手 / 枪斗术 / 智能制导。
+	# 弹匣扩容 + 人物连珠 + 武器双持（远程额外弹）。
+	_bullet_count = 1 + int(agg.counts.get("bullet", 0)) + int(person.counts.get("extra_projectile", 0)) + int(agg.counts.get("extra_projectile", 0))
+	# 转盘枪手 / 枪斗术 / 智能制导 + 锁定强化。
 	_has_spinner = bool(agg.flags.get("spinner", false))
+	_homing_deg = 0.0
 	if bool(agg.flags.get("homing_strong", false)):
-		_homing_deg = 2.0  # 追踪增强
+		_homing_deg = 2.0 + 1.0 * int(agg.counts.get("homing", 0))
 	elif bool(agg.flags.get("homing_weak", false)):
-		_homing_deg = 0.5  # 微弱追踪
-	# 人物暴击/吸血。
-	_crit_chance = person.crit_chance
-	_crit_dmg = person.crit_dmg
-	_lifesteal = person.lifesteal
+		_homing_deg = 0.5 + 0.5 * int(agg.counts.get("homing", 0))
+	# 暴击/吸血（人物 + 武器天赋）。
+	_crit_chance = agg.crit_chance + person.crit_chance + item.crit_chance
+	_crit_dmg = agg.crit_dmg + person.crit_dmg + item.crit_dmg
+	_lifesteal = person.lifesteal + item.lifesteal
+	# 燃烧弹 / 穿透 / 转盘强化 / 身法闪避（含道具）。
+	_burn_tier = (1 if agg.flags.get("burn", false) else 0) + int(agg.counts.get("burn_tier", 0)) + int(item.burn_tier)
+	_pierce = int(agg.counts.get("pierce", 0)) + int(person.counts.get("pierce", 0)) + int(item.pierce)
+	_spin_extra = int(agg.counts.get("spin_extra", 0))
+	_spin_dmg = int(agg.counts.get("spin_dmg", 0))
+	_spin_dual = bool(agg.flags.get("spin_dual", false))
+	if agg.dodge > 0:
+		_player().apply_weapon_dodge(agg.dodge)
 	damage = maxi(1, int(round((base_damage + item.dmg_flat) * dmg_mult)))
 	cooldown = base_cooldown * cd_mult
 	projectile_speed = base_projectile_speed + item.speed_bonus
@@ -130,6 +144,10 @@ func _fire_bullet(dir: Vector2) -> void:
 		bullet.set_homing(_homing_deg)
 	bullet.set_crit(_crit_chance, _crit_dmg)
 	bullet.set_lifesteal(_lifesteal)
+	if _pierce > 0:
+		bullet.set_pierce(_pierce)  # 穿甲/狙击/人物贯穿
+	if _burn_tier > 0:
+		bullet.set_burn(_burn_tier)  # 燃烧弹
 	bullet.global_position = global_position  # 发射中心 = 玩家自身
 	get_tree().current_scene.add_child(bullet)
 
@@ -144,10 +162,17 @@ func start_spinner() -> void:
 	_spinner_active = true
 	_spinner_ref = SPINNER_SCRIPT.new()
 	get_tree().current_scene.add_child(_spinner_ref)
-	# 一圈发射总数：攻速越快越密（冷却越短总数越多）；发射间隔随攻速变短。
-	var total := int(round(24.0 / maxf(cooldown, 0.1)))
-	_spinner_ref.setup(get_global_mouse_position(), damage, projectile_speed, total,
+	# 一圈发射总数：攻速越快越密；转盘扩容加弹；转盘重锤提伤。
+	var spin_dmg := int(round(damage * (1.0 + 0.3 * _spin_dmg)))
+	var total := int(round(24.0 / maxf(cooldown, 0.1))) + _spin_extra * 6
+	_spinner_ref.setup(get_global_mouse_position(), spin_dmg, projectile_speed, total,
 		maxf(cooldown * 0.4, 0.05), _homing_deg)
+	# 双转盘：额外扔出一个（位置偏移）。
+	if _spin_dual:
+		var spin2 := SPINNER_SCRIPT.new()
+		get_tree().current_scene.add_child(spin2)
+		spin2.setup(get_global_mouse_position() + Vector2(34, 0), spin_dmg, projectile_speed, total,
+			maxf(cooldown * 0.4, 0.05), _homing_deg)
 
 func _draw() -> void:
 	if _texture == null:

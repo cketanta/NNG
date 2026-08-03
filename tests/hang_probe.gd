@@ -36,19 +36,23 @@ func _initialize() -> void:
 func _process(_delta: float) -> bool:
 	_frames += 1
 	if _frames == 1:
-		_main.choose_difficulty(_diff)
+		# v1.4：测试模式入口（choose 已自动 start_game，不再重复 start_with_weapon）。
+		if _diff == "test":
+			_main.choose_test_mode()
+		else:
+			_main.choose_difficulty(_diff)
 		if _density > 0.0:
 			_main.difficulty["spawn_density_mult"] = _density
 			_main.call("_apply_difficulty_to_spawner")
 		var player: Node2D = _main.get_node("Player")
-		player.weapon_levels["whip"] = 1
-		player.weapon_levels["splitter"] = _splitter_lv
-		player.weapon_levels["black_hole_gun"] = _bhg_lv
-		player.weapon_levels["staff"] = _staff_lv
+		# v1.4：武器等级 = 天赋点数，用 debug_give_weapon 入槽后补足点数模拟满级。
+		_give_leveled("whip", 1)
+		_give_leveled("splitter", _splitter_lv)
+		_give_leveled("black_hole_gun", _bhg_lv)
+		_give_leveled("staff", _staff_lv)
 		for a in OS.get_cmdline_user_args():
 			if a == "noxp":
 				player.xp_max = 1000000  # 关闭升级，隔离升级/天赋是否卡死主因
-		_main.start_with_weapon("whip")
 	var now := Time.get_ticks_msec() / 1000.0
 	var frame_time := now - _last_time
 	_last_time = now
@@ -62,6 +66,17 @@ func _process(_delta: float) -> bool:
 		quit(0)
 		return true
 	return false
+
+## v1.4：给一把武器入槽并设满天赋点数（模拟满级武器）。
+func _give_leveled(id: String, lv: int) -> void:
+	if lv <= 0:
+		return
+	var main: Node = current_scene
+	main.call("debug_give_weapon", id)
+	var player: Node2D = main.get_node("Player")
+	for slot in player.weapon_slots:
+		if slot.id == id:
+			slot.tree.points = maxi(slot.tree.points, lv)
 
 func _count_black_holes() -> int:
 	var n := 0

@@ -12,6 +12,7 @@
 [ext_resource type="Script" uid="uid://dl4pnjklfeomm" path="res://scripts/ui/pause_panel.gd" id="11_pause"]
 [ext_resource type="Script" uid="uid://inbv73ogdq2p" path="res://scripts/ui/debug_panel.gd" id="12_debug"]
 [ext_resource type="Texture2D" path="res://assets/ui/bg_full.svg" id="13_bg"]
+[ext_resource type="Script" path="res://scripts/ui/bestiary_panel.gd" id="14_bestiary"]
 
 [sub_resource type="SystemFont" id="SystemFont_cjk"]
 font_names = PackedStringArray("Microsoft YaHei", "Segoe UI", "Arial")
@@ -65,6 +66,16 @@ theme_override_colors/font_color = Color(0.9, 0.9, 0.9, 1)
 theme_override_fonts/font = SubResource("SystemFont_cjk")
 theme_override_font_sizes/font_size = 20
 text = "第 1 波"
+
+[node name="WaveTimerLabel" type="Label" parent="HUD"]
+offset_left = 530.0
+offset_top = 168.0
+offset_right = 900.0
+offset_bottom = 208.0
+theme_override_colors/font_color = Color(0.7, 0.85, 1, 1)
+theme_override_fonts/font = SubResource("SystemFont_cjk")
+theme_override_font_sizes/font_size = 20
+text = "本波剩余 25 秒"
 
 [node name="XPBar" type="ProgressBar" parent="HUD" unique_id=989209482]
 offset_left = 24.0
@@ -305,6 +316,17 @@ grow_horizontal = 2
 grow_vertical = 2
 theme = ExtResource("8_theme")
 script = ExtResource("12_debug")
+
+[node name="BestiaryPanel" type="Control" parent="HUD"]
+process_mode = 3
+visible = false
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+theme = ExtResource("8_theme")
+script = ExtResource("14_bestiary")
 
 [connection signal="pressed" from="HUD/GameOverPanel/CenterBox/RestartButton" to="HUD" method="_on_restart_button_pressed"]
 [connection signal="pressed" from="HUD/GameOverPanel/CenterBox/QuitButton" to="HUD" method="_on_quit_button_pressed"]

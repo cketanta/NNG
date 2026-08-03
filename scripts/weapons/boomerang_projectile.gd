@@ -4,6 +4,7 @@ extends Area2D
 
 const LAYER_FRIENDLY := 4  # 玩家弹幕所在碰撞层（1 基）
 const LAYER_ENEMY := 3     # 敌人所在碰撞层（1 基）
+const MAX_FRIENDLY := 260  # 友好弹幕总量上限（性能保护）
 
 var _dir := Vector2.RIGHT
 var _speed := 460.0
@@ -12,6 +13,9 @@ var _out_distance := 300.0
 var _max_trips := 1
 var _pierce := 0
 var _whirlwind := false
+var _whirl_tier := 0
+var _magnet := 0
+var _armor_break := false
 var _crit_chance := 0.0
 var _crit_dmg := 0.0
 var _lifesteal := 0.0
@@ -25,7 +29,8 @@ var _hit_limit := 1     # 本趟命中上限
 var _spin := 0.0        # 旋转角（视觉）
 
 func setup(dir: Vector2, speed: float, damage: int, out_distance: float, max_trips: int,
-		pierce: int, whirlwind: bool, crit_chance: float, crit_dmg: float, lifesteal: float) -> void:
+		pierce: int, whirlwind: bool, crit_chance: float, crit_dmg: float, lifesteal: float,
+		whirl_tier: int = 0, magnet: int = 0, armor_break: bool = false) -> void:
 	_dir = dir.normalized()
 	_speed = speed
 	_damage = damage
@@ -33,12 +38,19 @@ func setup(dir: Vector2, speed: float, damage: int, out_distance: float, max_tri
 	_max_trips = maxi(max_trips, 1)
 	_pierce = maxi(pierce, 0)
 	_whirlwind = whirlwind
+	_whirl_tier = maxi(whirl_tier, 0)
+	_magnet = maxi(magnet, 0)
+	_armor_break = armor_break
 	_crit_chance = maxf(crit_chance, 0.0)
 	_crit_dmg = maxf(crit_dmg, 0.0)
 	_lifesteal = maxf(lifesteal, 0.0)
 	_update_hit_limit()
 
 func _ready() -> void:
+	# 弹幕总量性能保护：友好弹超过上限立即自毁。
+	if get_tree().get_nodes_in_group("friendly_projectiles").size() >= MAX_FRIENDLY:
+		queue_free()
+		return
 	collision_layer = 1 << (LAYER_FRIENDLY - 1)
 	collision_mask = 1 << (LAYER_ENEMY - 1)
 	body_entered.connect(_on_body_entered)
@@ -55,6 +67,7 @@ func _update_hit_limit() -> void:
 	_hit_limit = 1 + _pierce
 	if _whirlwind:
 		_hit_limit *= 2
+	_hit_limit += _whirl_tier  # 旋涡强化：额外命中数
 
 func _physics_process(delta: float) -> void:
 	# 旋转：旋涡状态下折返更快。
@@ -85,6 +98,11 @@ func _physics_process(delta: float) -> void:
 			_hit_count = 0
 		else:
 			global_position = global_position.move_toward(player.global_position, _speed * delta)
+	# 磁吸风暴：飞行时缓慢吸附附近敌人（拖拽）。
+	if _magnet > 0:
+		for enemy: Node2D in get_tree().get_nodes_in_group("enemies"):
+			if is_instance_valid(enemy) and global_position.distance_to(enemy.global_position) < 110.0:
+				enemy.set_pull(global_position, 60.0 + 30.0 * _magnet)
 
 func _on_body_entered(body: Node2D) -> void:
 	if not body.has_method("take_damage"):
@@ -108,6 +126,9 @@ func _on_body_entered(body: Node2D) -> void:
 	if crit_hit:
 		Fx.shake(get_tree(), 5.0)
 	body.take_damage(real_dmg)
+	# 破甲：命中削弱敌人防御（受击增伤）。
+	if _armor_break and body.has_method("add_vulnerable"):
+		body.add_vulnerable(1)
 	# 吸血：命中回复一定比例血量。
 	if _lifesteal > 0.0:
 		var player := get_tree().get_first_node_in_group("player")

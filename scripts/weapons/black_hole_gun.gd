@@ -34,6 +34,11 @@ var _duration := false    # 持久：持续时间延长
 var _crit_chance := 0.0   # 暴击率（%）
 var _crit_dmg := 0.0      # 暴击额外伤害（%）
 var _lifesteal := 0.0     # 吸血比例（%）
+var _erode := 0           # 虚空侵蚀层（黑洞每秒伤害）
+var _pull_extra := 0      # 引力强化（增强吸附）
+var _collapse_extra := 0  # 坍缩强化（坍缩伤害提升）
+var _slow_tier := 0       # 时间停滞：黑洞内部减速
+var _freeze_tier := 0     # 时间停滞：黑洞内部冻结
 
 func set_aim_direction(dir: Vector2) -> void:
 	_aim_dir = dir.normalized()
@@ -79,9 +84,19 @@ func _apply_talents() -> void:
 	_pull_strong = bool(agg.flags.get("pull_strong", false))
 	_collapse = bool(agg.flags.get("collapse", false))
 	_duration = bool(agg.flags.get("duration", false))
-	_crit_chance = person.crit_chance
-	_crit_dmg = person.crit_dmg
-	_lifesteal = person.lifesteal
+	_crit_chance = agg.crit_chance + person.crit_chance + item.crit_chance
+	_crit_dmg = agg.crit_dmg + person.crit_dmg + item.crit_dmg
+	_lifesteal = person.lifesteal + item.lifesteal
+	# 虚空侵蚀 / 引力 / 坍缩强化 / 时间停滞 / 护盾。
+	_erode = int(agg.counts.get("erode", 0))
+	_pull_extra = int(agg.counts.get("pull", 0))
+	_collapse_extra = int(agg.counts.get("collapse_dmg", 0))
+	_slow_tier = (1 if agg.flags.get("slow", false) else 0) + int(agg.counts.get("slow_tier", 0))
+	_freeze_tier = (1 if agg.flags.get("freeze", false) else 0) + int(agg.counts.get("freeze_tier", 0))
+	if agg.defense > 0:
+		_player().apply_weapon_defense(int(agg.defense))
+	if agg.dodge > 0:
+		_player().apply_weapon_dodge(agg.dodge)
 	damage = maxi(1, int(round((base_damage + item.dmg_flat) * dmg_mult)))
 	cooldown = base_cooldown * cd_mult
 	projectile_speed = base_projectile_speed + item.speed_bonus
@@ -90,10 +105,11 @@ func fire() -> void:
 	var projectile := PROJECTILE_SCENE.instantiate()
 	projectile.setup(_aim_dir, projectile_speed, damage, true)
 	projectile.set_spawn_black_hole(_bh_radius)
-	# 天赋参数：强吸 / 坍缩（消失爆炸伤害 = 本弹伤害）/ 持久（×1.3）。
-	var collapse_dmg := damage if _collapse else 0
+	# 天赋参数：强吸/引力 / 坍缩（伤害 + 坍缩强化）/ 持久 / 侵蚀 / 时间停滞。
+	var collapse_dmg := (damage if _collapse else 0) + 3 * _collapse_extra
 	var duration_mult := 1.3 if _duration else 1.0
-	projectile.set_black_hole_extra(_pull_strong, collapse_dmg, duration_mult)
+	projectile.set_black_hole_extra(_pull_strong or _pull_extra > 0, collapse_dmg, duration_mult)
+	projectile.set_black_hole_fields(_erode, _slow_tier, _freeze_tier)
 	projectile.set_crit(_crit_chance, _crit_dmg)
 	projectile.set_lifesteal(_lifesteal)
 	projectile.set_visual_type("black_hole_gun")

@@ -28,8 +28,9 @@ var _timer := 0.0
 
 # --- 天赋状态（由 _apply_talents 每帧重算） ---
 var _split_count := 2      # 命中分裂弹数
+var _split_tier := 0       # 分裂代数（分裂小弹命中再分裂）
+var _shard := 0            # 破片层数（命中小范围溅射）
 var _homing_deg := 0.0     # 分裂小弹追踪强度（制导分裂）
-var _poison := false       # 剧毒天赋
 var _crit_chance := 0.0    # 暴击率（%）
 var _crit_dmg := 0.0       # 暴击额外伤害（%）
 var _lifesteal := 0.0      # 吸血比例（%）
@@ -74,11 +75,12 @@ func _apply_talents() -> void:
 	var dmg_mult: float = agg.dmg_mult * person.dmg_mult * item.dmg_mult
 	var cd_mult: float = agg.cd_mult * person.cd_mult * item.cd_mult
 	_split_count = base_split_count + int(agg.counts.get("split", 0))
-	_poison = bool(agg.flags.get("poison", false))
-	_homing_deg = 0.5 if bool(agg.flags.get("homing_weak", false)) else 0.0
-	_crit_chance = person.crit_chance
-	_crit_dmg = person.crit_dmg
-	_lifesteal = person.lifesteal
+	_split_tier = int(agg.counts.get("split_tier", 0))
+	_shard = int(agg.counts.get("shard", 0))
+	_homing_deg = (0.5 + 0.5 * int(agg.counts.get("homing", 0))) if bool(agg.flags.get("homing_weak", false)) else 0.0
+	_crit_chance = agg.crit_chance + person.crit_chance + item.crit_chance
+	_crit_dmg = agg.crit_dmg + person.crit_dmg + item.crit_dmg
+	_lifesteal = person.lifesteal + item.lifesteal
 	damage = maxi(1, int(round((base_damage + item.dmg_flat) * dmg_mult)))
 	cooldown = base_cooldown * cd_mult
 	projectile_speed = base_projectile_speed + item.speed_bonus
@@ -89,8 +91,10 @@ func fire() -> void:
 	projectile.set_split_on_hit(_split_count)
 	if _homing_deg > 0.0:
 		projectile.set_split_child_homing(_homing_deg)  # 制导分裂：分裂小弹带追踪
-	if _poison:
-		projectile.set_poison()  # 剧毒：命中施加中毒
+	if _split_tier > 0:
+		projectile.set_split_child_split(2 + _split_tier)  # 二次分裂：分裂小弹命中再分裂
+	if _shard > 0:
+		projectile.set_explode(maxi(1, damage))  # 破片：命中小范围溅射
 	projectile.set_crit(_crit_chance, _crit_dmg)
 	projectile.set_lifesteal(_lifesteal)
 	projectile.set_visual_type("splitter")

@@ -7,6 +7,7 @@ var _main: Main
 var _gold_label: Label
 var _stats_label: Label
 var _owned_item_box: GridContainer  # 已有道具区（2 列网格）
+var _refresh_btn: Button        # 刷新商品按钮
 var _slots_box: VBoxContainer    # 武器槽位区（重建）
 var _buy_box: VBoxContainer      # 武器购买区
 var _item_container: GridContainer  # 道具购买区（2 列网格）
@@ -102,6 +103,10 @@ func _build_ui() -> void:
 	var item_v := VBoxContainer.new()
 	item_panel.add_child(item_v)
 	item_v.add_child(UiStyle.title_bar("道具购买"))
+	_refresh_btn = Button.new()
+	_refresh_btn.text = "刷新商品（5 金币）"
+	_refresh_btn.pressed.connect(_on_refresh_pressed)
+	item_v.add_child(_refresh_btn)
 	_item_container = GridContainer.new()  # 道具卡片 2 列网格（规整矩形）
 	_item_container.columns = 2
 	_item_container.add_theme_constant_override("h_separation", 8)
@@ -116,6 +121,8 @@ func _build_ui() -> void:
 func refresh() -> void:
 	_gold_label.text = "金币: %d" % _main.player.gold
 	_stats_label.text = _main.player_stats_text()
+	if _refresh_btn != null:
+		_refresh_btn.disabled = _main.player.gold < _main.SHOP_REFRESH_COST or _main.shop_refresh_count >= _main.SHOP_REFRESH_MAX
 	_rebuild_owned_items()
 	_rebuild_slots()
 	_rebuild_buy()
@@ -232,8 +239,9 @@ func _rebuild_items() -> void:
 		row_box.add_child(desc_label)
 		var buy := Button.new()
 		var bought_this_wave: bool = _main.bought_items_this_wave.get(item_id, false)
-		buy.text = "已购买" if bought_this_wave else "购买 %d" % ItemDefs.cost(item_id)
-		buy.disabled = _main.player.gold < ItemDefs.cost(item_id) or bought_this_wave
+		var price: int = _main.item_price(item_id)
+		buy.text = "已购买" if bought_this_wave else "购买 %d" % price
+		buy.disabled = _main.player.gold < price or bought_this_wave
 		buy.pressed.connect(_on_buy_item.bind(item_id))
 		row_box.add_child(buy)
 		_item_container.add_child(card)
@@ -245,6 +253,9 @@ func _on_buy_weapon(id: String) -> void:
 func _on_buy_item(item_id: String) -> void:
 	_main.buy_item(item_id)
 	refresh()
+
+func _on_refresh_pressed() -> void:
+	_main.refresh_shop_offerings()
 
 func _on_close_pressed() -> void:
 	_main.close_shop()

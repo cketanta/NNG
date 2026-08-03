@@ -42,7 +42,8 @@ func _build_ui() -> void:
 	vbox.add_child(quit_btn)
 
 func refresh() -> void:
-	_info_label.text = "难度: %s    第 %d 波" % [_main.difficulty_name(_main.difficulty_id), _main.wave_number]
+	_info_label.text = "难度: %s    第 %d 波    金币: %d" % [
+		_main.difficulty_name(_main.difficulty_id), _main.wave_number, _main.player.gold]
 
 func _on_resume_pressed() -> void:
 	_main.close_pause()

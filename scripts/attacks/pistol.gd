@@ -22,9 +22,11 @@ var melee_range := base_range
 var _aim_dir := Vector2.RIGHT
 var _firing := true
 var _timer := 0.0
-var _crit_chance := 0.0  # 暴击率（%，人物锐眼）
+var _crit_chance := 0.0  # 暴击率（%，人物+道具）
 var _crit_dmg := 0.0     # 暴击额外伤害（%）
-var _lifesteal := 0.0    # 吸血比例（%，人物血之渴望）
+var _lifesteal := 0.0    # 吸血比例（%，人物+道具）
+var _pierce := 0         # 子弹穿透数（穿甲弹道具）
+var _burn_tier := 0      # 燃烧层（燃烧弹道具）
 
 func set_aim_direction(dir: Vector2) -> void:
 	_aim_dir = dir.normalized()
@@ -53,9 +55,11 @@ func _player() -> Node2D:
 func _apply_talents() -> void:
 	var person: Dictionary = _player().player_talent.effects()
 	var item: Dictionary = _player().weapon_item_effects(false)
-	_crit_chance = person.crit_chance
-	_crit_dmg = person.crit_dmg
-	_lifesteal = person.lifesteal
+	_crit_chance = person.crit_chance + item.crit_chance
+	_crit_dmg = person.crit_dmg + item.crit_dmg
+	_lifesteal = person.lifesteal + item.lifesteal
+	_pierce = int(item.pierce)
+	_burn_tier = int(item.burn_tier)
 	damage = maxi(1, int(round((base_damage + item.dmg_flat) * person.dmg_mult * item.dmg_mult)))
 	cooldown = base_cooldown * person.cd_mult * item.cd_mult
 	projectile_speed = base_projectile_speed + item.speed_bonus
@@ -77,6 +81,10 @@ func fire() -> void:
 	projectile.set_visual_type("pistol")
 	projectile.set_crit(_crit_chance, _crit_dmg)
 	projectile.set_lifesteal(_lifesteal)
+	if _pierce > 0:
+		projectile.set_pierce(_pierce)
+	if _burn_tier > 0:
+		projectile.set_burn(_burn_tier)
 	projectile.global_position = global_position  # 发射中心 = 玩家自身
 	get_tree().current_scene.add_child(projectile)
 

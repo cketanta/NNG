@@ -10,6 +10,7 @@ const LAYER_ENEMY_PROJECTILE := 5   # 敌方弹幕所在的碰撞层（1 基）
 const TRAP_RADIUS := 26.0             # 黑洞：低于此距离子弹开始抽搐
 const CHILD_SCENE_PATH := "res://scenes/weapons/projectile.tscn"
 const BLACK_HOLE_SCENE_PATH := "res://scenes/items/black_hole.tscn"
+const MAX_FRIENDLY := 260  # 友好弹幕总量上限（性能保护，防满级弹幕海拖垮物理）
 
 # 各武器子弹的贴图（占位 SVG，后续换正式美术只需替换文件）。
 const TEX_STAFF := preload("res://assets/projectiles/staff_bullet.svg")
@@ -39,20 +40,34 @@ var _lifesteal := 0.0       # 吸血比例（%，命中回复血量）
 var _pierce := 0            # 剩余穿透数（>0 时命中后继续飞行）
 var _explode := false       # 命中小范围爆炸（法杖爆裂）
 var _explode_dmg := 1
-var _poison := false        # 命中施毒（分裂者剧毒）
+var _poison := false        # 命中施毒（预留）
+var _burn_tier := 0         # 命中点燃层数（左轮燃烧弹）
+var _slow_tier := 0         # 命中减速层数（法杖冰霜）
+var _freeze_tier := 0       # 命中冻结层级（法杖冰霜）
+var _chain := 0             # 命中弹射次数（法杖闪电连锁）
 var _child_homing := 0.0    # 分裂小弹追踪强度（分裂者制导分裂）
+var _child_split := 0       # 分裂小弹再分裂数（分裂者二次分裂）
 
 var _pull_target: Node2D = null
 var _pull_speed := 0.0
 var _twitch_time := 0.0
+var _homing_tick := 0  # 追踪方向更新节流（每 3 物理帧重算一次，降低 O(弹×敌) 遍历）
 
 var _child_scene: PackedScene
 var _black_hole_scene: PackedScene
 
-# 黑洞枪额外参数（天赋：强吸 / 坍缩 / 持久）。
+func _ready() -> void:
+	# 弹幕总量性能保护：友好弹超过上限立即自毁（setup 已先加入 group，计数含自己）。
+	if _friendly and get_tree().get_nodes_in_group("friendly_projectiles").size() >= MAX_FRIENDLY:
+		queue_free()
+
+# 黑洞枪额外参数（天赋：强吸 / 坍缩 / 持久 / 侵蚀 / 时间）。
 var _bh_pull_strong := false
 var _bh_duration_mult := 1.0
 var _black_hole_collapse_dmg := 0
+var _bh_erode_dps := 0
+var _bh_slow_tier := 0
+var _bh_freeze_tier := 0
 
 func setup(dir: Vector2, speed: float, damage: int, friendly: bool) -> void:
 	_direction = dir.normalized()
@@ -113,9 +128,29 @@ func set_explode(dmg: int) -> void:
 func set_poison() -> void:
 	_poison = true
 
+## 左轮燃烧弹：命中点燃（每秒掉血）。
+func set_burn(tier: int) -> void:
+	_burn_tier = maxi(tier, 0)
+
+## 命中减速（法杖冰霜）。
+func set_slow(tier: int) -> void:
+	_slow_tier = maxi(tier, 0)
+
+## 命中冻结（法杖冰霜）：短暂定身。
+func set_freeze(tier: int) -> void:
+	_freeze_tier = maxi(tier, 0)
+
+## 命中弹射（法杖闪电连锁）：命中后对附近敌人造成部分伤害。
+func set_chain(count: int) -> void:
+	_chain = maxi(count, 0)
+
 ## 分裂小弹的追踪强度（分裂者制导分裂天赋）。
 func set_split_child_homing(deg: float) -> void:
 	_child_homing = maxf(deg, 0.0)
+
+## 分裂小弹命中后再分裂出 count 枚小弹（分裂者二次分裂）。
+func set_split_child_split(count: int) -> void:
+	_child_split = maxi(count, 0)
 
 ## 黑洞枪：命中敌人在命中点生成黑洞。
 func set_spawn_black_hole(radius: float) -> void:
@@ -128,6 +163,12 @@ func set_black_hole_extra(strong_pull: bool, collapse_dmg: int, duration_mult: f
 	_black_hole_collapse_dmg = maxi(collapse_dmg, 0)
 	_bh_duration_mult = maxf(duration_mult, 1.0)
 
+## 黑洞枪额外字段（天赋）：虚空侵蚀 / 时间停滞（减速/冻结）。
+func set_black_hole_fields(erode: int, slow: int, freeze: int) -> void:
+	_bh_erode_dps = maxi(erode, 0)
+	_bh_slow_tier = maxi(slow, 0)
+	_bh_freeze_tier = maxi(freeze, 0)
+
 ## 黑洞在本弹进入其吸引范围时调用。
 func apply_pull(center: Node2D, speed: float) -> void:
 	_pull_target = center
@@ -136,7 +177,11 @@ func apply_pull(center: Node2D, speed: float) -> void:
 func _physics_process(delta: float) -> void:
 	rotation = _direction.angle()  # 贴图朝向飞行方向（月牙气刃尖端朝前）
 	if _homing_deg > 0.0 and _friendly:
-		_apply_homing(delta)
+		# 追踪每 3 物理帧重算一次目标方向（中间帧沿用），降低弹幕海下的敌人遍历开销。
+		_homing_tick += 1
+		if _homing_tick >= 3:
+			_homing_tick = 0
+			_apply_homing(delta * 3.0)
 	global_position += _direction * _speed * delta
 	if is_instance_valid(_pull_target):
 		var center := _pull_target.global_position
@@ -180,6 +225,11 @@ func _draw() -> void:
 		_:
 			_draw_fallback_ball()
 			return
+	# 冰霜弹（冰霜射手）用代码绘制淡蓝渐变，不占贴图。
+	if _visual_type == "frost":
+		_draw_frost_ball()
+		return
+	_draw_texture_centered(tex, size)
 	_draw_texture_centered(tex, size)
 
 func _draw_texture_centered(tex: Texture2D, size: float) -> void:
@@ -191,6 +241,12 @@ func _draw_fallback_ball() -> void:
 	draw_circle(Vector2.ZERO, radius, Color(0.45, 0.8, 1.0))
 	if not _is_small:
 		draw_circle(Vector2.ZERO, radius * 0.4, Color(1.0, 1.0, 1.0, 0.9))
+
+## 冰霜弹：淡蓝渐变球（冰霜射手）。
+func _draw_frost_ball() -> void:
+	draw_circle(Vector2.ZERO, 5.5, Color(0.4, 0.75, 1.0))
+	draw_circle(Vector2.ZERO, 3.5, Color(0.75, 0.92, 1.0))
+	draw_circle(Vector2.ZERO, 1.6, Color(1.0, 1.0, 1.0))
 
 func _on_body_entered(body: Node2D) -> void:
 	if not body.has_method("take_damage"):
@@ -220,6 +276,15 @@ func _on_body_entered(body: Node2D) -> void:
 		# 剧毒（分裂者）。
 		if _poison and body.has_method("add_poison"):
 			body.add_poison(1)
+		# 点燃（左轮燃烧弹）。
+		if _burn_tier > 0 and body.has_method("add_burn"):
+			body.add_burn(_burn_tier)
+		# 减速。
+		if _slow_tier > 0 and body.has_method("add_slow"):
+			body.add_slow(_slow_tier)
+		# 冻结（法杖冰霜）。
+		if _freeze_tier > 0 and body.has_method("freeze"):
+			body.freeze(0.6 * _freeze_tier)
 		# 分裂（分裂者）。
 		if _split_count > 0:
 			_spawn_split_children()
@@ -229,6 +294,9 @@ func _on_body_entered(body: Node2D) -> void:
 		# 爆裂（法杖）。
 		if _explode:
 			_explode_area()
+		# 闪电连锁：对附近敌人弹射部分伤害。
+		if _chain > 0:
+			_spawn_chain(body)
 	# 穿透：命中后继续飞行而非消失，剩余穿透数耗尽才消失。
 	if _pierce > 0:
 		_pierce -= 1
@@ -246,6 +314,8 @@ func _spawn_split_children() -> void:
 		child.set_visual_type("splitter_child")
 		if _child_homing > 0.0:
 			child.set_homing(_child_homing)
+		if _child_split > 0:
+			child.set_split_on_hit(_child_split)  # 分裂小弹命中再分裂
 		child.global_position = global_position
 		get_tree().current_scene.add_child(child)
 
@@ -261,8 +331,26 @@ func _spawn_black_hole_at(pos: Vector2) -> void:
 	if _black_hole_collapse_dmg > 0:
 		hole.collapse_damage = _black_hole_collapse_dmg
 		hole.collapse_radius = _black_hole_radius * 0.9  # 坍缩：消失时爆炸
+	if _bh_erode_dps > 0:
+		hole.erode_dps = _bh_erode_dps  # 虚空侵蚀
+	if _bh_slow_tier > 0:
+		hole.slow_tier = _bh_slow_tier  # 时间停滞：减速
+	if _bh_freeze_tier > 0:
+		hole.freeze_tier = _bh_freeze_tier  # 时间停滞：冻结
 	get_tree().current_scene.add_child(hole)
 	hole.global_position = pos
+
+## 闪电连锁：命中后对附近至多 count 个敌人弹射部分伤害（法杖闪电）。
+func _spawn_chain(hit_body: Node2D) -> void:
+	var chain_dmg := maxi(1, _damage / 2)
+	var hits := 0
+	for enemy: Node2D in get_tree().get_nodes_in_group("enemies"):
+		if not is_instance_valid(enemy) or enemy == hit_body:
+			continue
+		if global_position.distance_to(enemy.global_position) < 130.0 and hits < _chain:
+			enemy.take_damage(chain_dmg)
+			Fx.hit(enemy.global_position, get_tree(), false)
+			hits += 1
 
 ## 法杖爆裂：命中点附近敌人受一次额外伤害。
 func _explode_area() -> void:
@@ -294,3 +382,11 @@ func _apply_homing(delta: float) -> void:
 ## 玩家受击盒与敌方弹重叠时调用。
 func get_damage_value() -> int:
 	return _damage
+
+## 敌方弹减速层（冰霜射手，玩家命中减速）。
+func get_slow_tier() -> int:
+	return _slow_tier
+
+## 敌方弹中毒层（毒巫医，玩家命中中毒）。
+func get_poison_tier() -> int:
+	return 1 if _poison else 0

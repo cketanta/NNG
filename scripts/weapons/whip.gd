@@ -36,9 +36,10 @@ var _combo_timer := 0.0
 var _sweep_count := 1      # 一次攻击连抽段数（连抽天赋）
 var _bleed_on_hit := false # 血鞭：命中附加流血
 var _bleed_max := 0        # 流血上限（血鞭 20）
-var _crit_chance := 0.0    # 暴击率（%，人物锐眼/致命抽击）
+var _crit_chance := 0.0    # 暴击率（%，人物+武器天赋）
 var _crit_dmg := 0.0       # 暴击额外伤害（%）
-var _lifesteal := 0.0      # 吸血比例（%，人物血之渴望）
+var _lifesteal := 0.0      # 吸血比例（%，人物+武器天赋）
+var _slow_tier := 0        # 缠绕减速层级（缠绕/束缚/锁链）
 
 func set_aim_direction(dir: Vector2) -> void:
 	_aim_dir = dir.normalized()
@@ -88,11 +89,18 @@ func _apply_talents() -> void:
 	var dmg_mult: float = agg.dmg_mult * person.dmg_mult * item.dmg_mult
 	var cd_mult: float = agg.cd_mult * person.cd_mult * item.cd_mult
 	_sweep_count = 1 + int(agg.counts.get("sweep", 0))
-	_bleed_on_hit = bool(agg.flags.get("bleed", false))
-	_bleed_max = int(agg.counts.get("bleed_max", 0))
-	_crit_chance = agg.crit_chance + person.crit_chance
-	_crit_dmg = agg.crit_dmg + person.crit_dmg
-	_lifesteal = person.lifesteal
+	_bleed_on_hit = bool(agg.flags.get("bleed", false)) or item.bleed > 0
+	_bleed_max = int(agg.counts.get("bleed_max", 0)) + int(item.bleed_max)
+	_crit_chance = agg.crit_chance + person.crit_chance + item.crit_chance
+	_crit_dmg = agg.crit_dmg + person.crit_dmg + item.crit_dmg
+	_lifesteal = agg.lifesteal + person.lifesteal + item.lifesteal
+	# 缠绕减速：命中减速敌人。
+	_slow_tier = int(agg.counts.get("slow_tier", 0)) + (1 if agg.flags.get("slow", false) else 0)
+	# 身法：防御/闪避上报玩家（多把武器取最大）。
+	if agg.defense > 0:
+		_player().apply_weapon_defense(int(agg.defense))
+	if agg.dodge > 0:
+		_player().apply_weapon_dodge(agg.dodge)
 	damage = maxi(1, int(round((base_damage + item.dmg_flat) * dmg_mult)))
 	cooldown = base_cooldown * cd_mult
 	melee_range = base_range * range_mult
@@ -150,6 +158,8 @@ func _on_zone_body_entered(body: Node2D, dmg: int) -> void:
 			_player().heal(maxi(1, int(round(real_dmg * _lifesteal / 100.0))))
 		if _bleed_on_hit and body.has_method("add_bleed"):
 			body.add_bleed(1)  # 血鞭：命中叠加流血
+		if _slow_tier > 0 and body.has_method("add_slow"):
+			body.add_slow(_slow_tier)  # 缠绕/束缚/锁链：命中减速
 
 ## 凸扇环多边形（弧角必须 < 180°），朝 +X 方向，用于命中区与视觉。
 func _sector_points(inner_radius: float, outer_radius: float, arc: float) -> PackedVector2Array:

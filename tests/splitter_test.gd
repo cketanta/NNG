@@ -1,7 +1,5 @@
 extends SceneTree
-## 分裂者天赋测试：分裂弹数、制导分裂（小弹追踪）、剧毒（中毒 DOT）、制导与剧毒互斥。
-
-const MELEE_SCENE := preload("res://scenes/enemies/enemy_melee.tscn")
+## 分裂者天赋测试：分裂弹数、制导追踪、二次分裂（分裂小弹再分裂）、破片溅射。
 
 var _frames := 0
 var _failures: Array[String] = []
@@ -42,10 +40,15 @@ func _process(_delta: float) -> bool:
 		_grant("split_homing")
 		_splitter.call("_apply_talents")
 		_check_homing()
-		_check_poison_conflict()
+		_grant("sp2_tier_1")  # 二次分裂
+		_splitter.call("_apply_talents")
+		_check_tier()
+		_grant("spf_shard_1")  # 破片溅射
+		_splitter.call("_apply_talents")
+		_check_shard()
 		_grant("split_power_1")
 		_splitter.call("_apply_talents")
-		_check_poison_hit()
+		_check_fire()
 		_finish()
 		return true
 	return false
@@ -74,34 +77,29 @@ func _check_homing() -> void:
 	else:
 		_failures.append("homing_deg=%.2f" % _splitter.get("_homing_deg"))
 
-func _check_poison_conflict() -> void:
-	if _tree.unlock("splitter", "split_poison"):
-		_failures.append("split_poison unlocked despite homing conflict")
+func _check_tier() -> void:
+	if _splitter.get("_split_tier") == 1:
+		print("[OK] sp2_tier_1 -> split tier 1 (二次分裂)")
 	else:
-		print("[OK] split_poison conflicts with split_homing")
-	# 直接置 owned 验证剧毒（不触发冲突检查）。
-	_tree.owned["splitter"]["split_poison"] = true
-	_splitter.call("_apply_talents")
-	if _splitter.get("_poison") == true:
-		print("[OK] split_poison -> poison enabled")
-	else:
-		_failures.append("poison not enabled")
+		_failures.append("split_tier=%d" % _splitter.get("_split_tier"))
 
-func _check_poison_hit() -> void:
-	var enemy := MELEE_SCENE.instantiate()
-	enemy.set("max_hp", 100)
-	_main.get_node("Spawner").add_child(enemy)
+func _check_shard() -> void:
+	if _splitter.get("_shard") == 1:
+		print("[OK] spf_shard_1 -> shard 1 (破片溅射)")
+	else:
+		_failures.append("shard=%d" % _splitter.get("_shard"))
+
+func _check_fire() -> void:
 	_splitter.call("fire")
 	var proj := get_nodes_in_group("friendly_projectiles")
 	if proj.is_empty():
 		_failures.append("no projectile fired")
 		return
-	proj[proj.size() - 1].call("_on_body_entered", enemy)
-	if enemy.get("poison_stacks") == 1:
-		print("[OK] poison hit applies poison stack")
+	var last := proj[proj.size() - 1]
+	if last.get("_split_count") == 4 and last.get("_child_split") == 3 and last.get("_explode") == true:
+		print("[OK] projectile carries split(4)/child_split(3)/shard")
 	else:
-		_failures.append("poison_stacks=%d" % enemy.get("poison_stacks"))
-	enemy.free()
+		_failures.append("proj split=%d child_split=%d explode=%s" % [last.get("_split_count"), last.get("_child_split"), last.get("_explode")])
 
 func _find_idx(slots: Array, id: String) -> int:
 	for i in range(slots.size()):

@@ -14,9 +14,13 @@ const CORE_TEXTURE := preload("res://assets/effects/black_hole_core.svg")  # 核
 @export var lifetime: float = 4.0
 @export var collapse_damage := 0     # 坍缩天赋：>0 时黑洞消失产生圆形爆炸伤害
 @export var collapse_radius := 0.0   # 爆炸半径（0 表示用当前 radius）
+@export var erode_dps := 0           # 虚空侵蚀：每秒对内部敌人伤害
+@export var slow_tier := 0           # 时间停滞：内部敌人减速层
+@export var freeze_tier := 0         # 时间停滞：内部敌人冻结层
 
 var _life := 0.0
 var _rotate_angle := 0.0
+var _erode_timer := 0.0
 
 func _process(delta: float) -> void:
 	_life += delta
@@ -33,6 +37,19 @@ func _process(delta: float) -> void:
 	for enemy in get_tree().get_nodes_in_group(ENEMY_GROUP):
 		if is_instance_valid(enemy) and global_position.distance_to(enemy.global_position) < radius:
 			enemy.set_pull(global_position, enemy_pull_speed)
+			# 时间停滞：内部敌人减速/冻结。
+			if slow_tier > 0 and enemy.has_method("add_slow"):
+				enemy.add_slow(slow_tier)
+			if freeze_tier > 0 and enemy.has_method("freeze"):
+				enemy.freeze(0.25 * freeze_tier)
+	# 虚空侵蚀：每秒对内部敌人造成伤害。
+	if erode_dps > 0:
+		_erode_timer += delta
+		if _erode_timer >= 1.0:
+			_erode_timer = 0.0
+			for enemy in get_tree().get_nodes_in_group(ENEMY_GROUP):
+				if is_instance_valid(enemy) and global_position.distance_to(enemy.global_position) < radius:
+					enemy.take_damage(erode_dps)
 
 	for group_name in BULLET_GROUPS:
 		for bullet in get_tree().get_nodes_in_group(group_name):

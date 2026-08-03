@@ -1,0 +1,14 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_elite.gd" id="1_enemy_elite"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_elite"]
+radius = 16.0
+
+[node name="EnemyElite" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("1_enemy_elite")
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_elite")

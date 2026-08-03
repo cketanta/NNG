@@ -6,11 +6,11 @@ extends Control
 
 signal node_clicked(talent_id: String)
 
-const NODE_W := 104.0
-const NODE_H := 40.0
-const COL_GAP := 8.0
-const ROW_GAP := 18.0
-const PAD := 10.0
+const NODE_W := 66.0
+const NODE_H := 26.0
+const COL_GAP := 4.0
+const ROW_GAP := 12.0
+const PAD := 6.0
 
 const COLOR_OWNED := Color(0.95, 0.78, 0.3)
 const COLOR_OWNED_BG := Color(0.30, 0.26, 0.12, 0.95)
@@ -122,8 +122,8 @@ func _max_depth() -> int:
 
 func _draw() -> void:
 	if _tree == null or _tree_id == "" or _tree_id == "pistol":
-		draw_string(get_theme_default_font(), Vector2(0, 24), "尚未选择攻击方式（首次升级时选择短刃 / 左轮）",
-			HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color(0.7, 0.7, 0.7))
+		draw_string(get_theme_default_font(), Vector2(0, 20), "尚未选择攻击方式（首次升级时选择短刃 / 左轮）",
+			HORIZONTAL_ALIGNMENT_LEFT, -1, 12, Color(0.7, 0.7, 0.7))
 		return
 	# 连线：前置节点（或虚拟根）底部中心 → 本节点顶部中心，二次贝塞尔弯曲。
 	for id: String in _rects.keys():
@@ -169,9 +169,9 @@ func _draw_node(rect: Rect2, text: String, border: Color, bg: Color) -> void:
 	style.bg_color = bg
 	style.border_color = border
 	style.set_border_width_all(1.5)
-	style.set_corner_radius_all(7)
+	style.set_corner_radius_all(5)
 	draw_style_box(style, rect)
-	var fsize := 15
+	var fsize := 12
 	draw_string(get_theme_default_font(), rect.position + Vector2(0.0, rect.size.y * 0.5 + fsize * 0.38),
 		text, HORIZONTAL_ALIGNMENT_CENTER, rect.size.x, fsize, Color(0.95, 0.95, 0.95))
 

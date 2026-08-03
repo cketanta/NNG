@@ -61,6 +61,15 @@ func _build_ui() -> void:
 	test_btn.custom_minimum_size = Vector2(0, 46)
 	test_btn.pressed.connect(_on_test_mode_pressed)
 	vbox.add_child(test_btn)
+	# 图鉴入口（角落）。
+	var bestiary_btn := Button.new()
+	bestiary_btn.text = "图鉴（怪物/武器/道具/天赋树）"
+	bestiary_btn.custom_minimum_size = Vector2(0, 44)
+	bestiary_btn.pressed.connect(_on_bestiary_pressed)
+	vbox.add_child(bestiary_btn)
+
+func _on_bestiary_pressed() -> void:
+	_main.open_bestiary()
 
 func _difficulty_desc(diff_id: String) -> String:
 	match diff_id:

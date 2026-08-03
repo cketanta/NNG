@@ -45,13 +45,13 @@ func _process(_delta: float) -> bool:
 			print("[OK] L opens debug panel with pause")
 		else:
 			_failures.append("debug panel not open (visible=%s paused=%s)" % [debug.visible, paused])
-		# 调波数：立即清怪重开。
-		_main.set_wave_number(10)
-		if _main.get("wave_number") == 10:
-			print("[OK] wave set to 10")
+		# 调波数：立即清怪重开（避开 5 的倍数 BOSS 波，仅验证清怪）。
+		_main.set_wave_number(8)
+		if _main.get("wave_number") == 8:
+			print("[OK] wave set to 8")
 		else:
 			_failures.append("wave_number=%d" % _main.get("wave_number"))
-		if "10" in _main.get_node("HUD/WaveLabel").text:
+		if "8" in _main.get_node("HUD/WaveLabel").text:
 			print("[OK] HUD wave label updated")
 		else:
 			_failures.append("HUD wave label '%s'" % _main.get_node("HUD/WaveLabel").text)

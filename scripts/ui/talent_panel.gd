@@ -53,12 +53,9 @@ func _build_ui() -> void:
 	_personal_points_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	personal_v.add_child(_personal_points_label)
 	personal_v.add_child(UiStyle.title_bar("人物天赋（升级获得点数，作用于所有武器）"))
-	var personal_scroll := ScrollContainer.new()
-	personal_scroll.custom_minimum_size = Vector2(0, 260)  # 人物树横竖滚动
-	_personal_tree_view = TREE_VIEW_SCRIPT.new()
+	_personal_tree_view = TREE_VIEW_SCRIPT.new()  # 紧凑树直接显示（无滚动）
 	_personal_tree_view.connect("node_clicked", _on_personal_node_clicked)
-	personal_scroll.add_child(_personal_tree_view)
-	personal_v.add_child(personal_scroll)
+	personal_v.add_child(_personal_tree_view)
 	_personal_detail_label = Label.new()
 	_personal_detail_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	personal_v.add_child(_personal_detail_label)
@@ -85,12 +82,9 @@ func _build_ui() -> void:
 	var tree_v := VBoxContainer.new()
 	tree_panel.add_child(tree_v)
 	tree_v.add_child(UiStyle.title_bar("武器天赋（金=已点亮 蓝=可选 灰=未解锁 红框=互斥；点击节点查看）"))
-	var tree_scroll := ScrollContainer.new()
-	tree_scroll.custom_minimum_size = Vector2(0, 320)  # 武器天赋树横竖滚动
-	_tree_view = TREE_VIEW_SCRIPT.new()
+	_tree_view = TREE_VIEW_SCRIPT.new()  # 紧凑树直接显示（无滚动）
 	_tree_view.connect("node_clicked", _on_node_clicked)
-	tree_scroll.add_child(_tree_view)
-	tree_v.add_child(tree_scroll)
+	tree_v.add_child(_tree_view)
 	right.add_child(tree_panel)
 	var choice_panel := PanelContainer.new()
 	choice_panel.add_theme_stylebox_override("panel", UiStyle.section(3))

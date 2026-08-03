@@ -6,6 +6,7 @@ extends Node2D
 const XP_GEM_SCENE := preload("res://scenes/items/xp_gem.tscn")
 const COIN_SCENE := preload("res://scenes/items/coin.tscn")
 const HEART_SCENE := preload("res://scenes/items/heart.tscn")
+const BOSS_SCRIPT := preload("res://scripts/enemies/enemy_boss.gd")  # BOSS 波结束条件判断用
 
 enum GameState { START, COMBAT, SHOP, GAMEOVER }
 
@@ -28,7 +29,7 @@ const DIFFICULTIES := {
 	"hard":   { "name": "困难", "spawn_interval_mult": 0.8, "enemy_hp_mult": 2.0, "enemy_attack_mult": 2.0 },
 }
 
-@export var wave_duration: float = 25.0
+@export var wave_duration: float = 50.0
 @export var auto_pause_menus := true
 
 var kills := 0
@@ -44,6 +45,9 @@ var test_mode := false  # 测试模式：本局可按 L 打开调试面板
 var shop_item_offerings: Array[String] = []
 var purchased_unique: Array[String] = []
 var bought_items_this_wave: Dictionary = {}
+const SHOP_REFRESH_COST := 5   # 刷新商品花费
+const SHOP_REFRESH_MAX := 3    # 每波最多刷新次数
+var shop_refresh_count := 0    # 本波已刷新次数
 
 @onready var player: CharacterBody2D = $Player
 @onready var spawner: Node2D = $Spawner
@@ -55,6 +59,7 @@ var bought_items_this_wave: Dictionary = {}
 @onready var difficulty_panel: DifficultyPanel = $HUD/DifficultyPanel
 @onready var pause_panel: PausePanel = $HUD/PausePanel
 @onready var debug_panel: DebugPanel = $HUD/DebugPanel
+@onready var bestiary_panel: BestiaryPanel = $HUD/BestiaryPanel
 
 func _ready() -> void:
 	player.hp_changed.connect(_on_player_hp_changed)
@@ -81,6 +86,7 @@ func _ready() -> void:
 	difficulty_panel.setup(self)
 	pause_panel.setup(self)
 	debug_panel.setup(self)
+	bestiary_panel.setup(self)
 
 	_apply_difficulty_to_spawner()
 	open_difficulty()
@@ -91,6 +97,7 @@ func _process(delta: float) -> void:
 	elapsed += delta
 	wave_timer += delta
 	hud.update_time(elapsed)
+	hud.update_wave_timer(wave_duration - wave_timer)
 	if wave_timer >= wave_duration:
 		end_wave()
 
@@ -153,7 +160,7 @@ func _apply_difficulty_to_spawner() -> void:
 		difficulty["enemy_hp_mult"],
 		difficulty["enemy_attack_mult"],
 		difficulty.get("spawn_density_mult", 1.0))
-	wave_duration = float(difficulty.get("wave_duration", 25.0))
+	wave_duration = float(difficulty.get("wave_duration", 50.0))
 
 ## 开局直接开始战斗（初始破旧手枪已入槽）。
 func start_game() -> void:
@@ -176,9 +183,19 @@ func start_next_wave() -> void:
 	hud.update_wave(wave_number)
 
 func end_wave() -> void:
+	# BOSS 波：BOSS 存活时波次不结束，击杀后才能进商店。
+	if wave_number % 5 == 0 and _boss_alive():
+		return
 	spawner.end_wave()
 	_clear_remaining_enemies()
 	open_shop()
+
+## BOSS 是否存活（BOSS 波结束条件）。
+func _boss_alive() -> bool:
+	for enemy in get_tree().get_nodes_in_group("enemies"):
+		if is_instance_valid(enemy) and enemy.get_script() == BOSS_SCRIPT:
+			return true
+	return false
 
 func _clear_remaining_enemies() -> void:
 	for enemy in get_tree().get_nodes_in_group("enemies"):
@@ -191,9 +208,21 @@ func open_shop() -> void:
 	game_state = GameState.SHOP
 	if auto_pause_menus:
 		get_tree().paused = true
+	shop_refresh_count = 0
 	refresh_shop_items()
 	shop_panel.visible = true
 	shop_panel.refresh()
+
+## 刷新商店道具：花费金币重roll 5 个道具（每波限次）。
+func refresh_shop_offerings() -> bool:
+	if player.gold < SHOP_REFRESH_COST or shop_refresh_count >= SHOP_REFRESH_MAX:
+		return false
+	player.gold -= SHOP_REFRESH_COST
+	player.gold_changed.emit(player.gold)
+	shop_refresh_count += 1
+	refresh_shop_items()
+	shop_panel.refresh()
+	return true
 
 func close_shop() -> void:
 	shop_panel.visible = false
@@ -212,9 +241,15 @@ func refresh_shop_items() -> void:
 	pool.shuffle()
 	shop_item_offerings = pool.slice(0, 5)
 
+## 道具当前价格：基础价 × (1 + 稀有度涨幅 × 已有个数)。越买越贵。
+func item_price(item_id: String) -> int:
+	var base := ItemDefs.cost(item_id)
+	var owned: int = player.item_counts.get(item_id, 0)
+	return int(round(base * (1.0 + ItemDefs.price_growth(item_id) * owned)))
+
 ## 购买道具：校验金币/每波一次/唯一 -> 扣款 -> 玩家侧生效。
 func buy_item(item_id: String) -> bool:
-	var cost := ItemDefs.cost(item_id)
+	var cost := item_price(item_id)
 	if player.gold < cost:
 		return false
 	if bought_items_this_wave.get(item_id, false):
@@ -338,6 +373,16 @@ func close_debug() -> void:
 	if auto_pause_menus:
 		get_tree().paused = false
 
+func open_bestiary() -> void:
+	if auto_pause_menus:
+		get_tree().paused = true
+	bestiary_panel.visible = true
+
+func close_bestiary() -> void:
+	bestiary_panel.visible = false
+	if auto_pause_menus:
+		get_tree().paused = false
+
 func set_wave_number(n: int) -> void:
 	wave_number = maxi(n, 1)
 	_clear_remaining_enemies()
@@ -425,6 +470,13 @@ func end_game(reason: String) -> void:
 	game_state = GameState.GAMEOVER
 	spawner.end_wave()
 	get_tree().paused = false
+	# 清理残留弹幕（结算画面不再物理解算，性能与整洁）。
+	for n in get_tree().get_nodes_in_group("friendly_projectiles"):
+		if is_instance_valid(n):
+			n.queue_free()
+	for n in get_tree().get_nodes_in_group("enemy_projectiles"):
+		if is_instance_valid(n):
+			n.queue_free()
 	var wm := player.get_node_or_null("WeaponManager")
 	if wm != null:
 		wm.call("halt")
@@ -442,10 +494,10 @@ func _on_player_died() -> void:
 func _on_enemy_killed(global_pos: Vector2, xp_value: int, gold_value: int) -> void:
 	kills += 1
 	hud.update_kills(kills)
-	# 人物天赋：经验/金币加成（聚财 / 慧眼）。
+	# 经验/金币加成：人物天赋 + 道具（经验法典/金币袋等）。
 	var fx: Dictionary = player.player_talent.effects()
-	var final_xp := maxi(1, int(round(xp_value * (1.0 + fx.xp_gain / 100.0))))
-	var final_gold := maxi(1, int(round(gold_value * (1.0 + fx.gold_gain / 100.0))))
+	var final_xp := maxi(1, int(round(xp_value * (1.0 + (fx.xp_gain + player.item_xp_gain) / 100.0))))
+	var final_gold := maxi(1, int(round(gold_value * (1.0 + (fx.gold_gain + player.item_gold_gain) / 100.0))))
 	spawn_xp_gem(global_pos, final_xp)
 	spawn_coin(global_pos, final_gold)
 	var heart_chance: float = 0.05 + 0.05 * player.luck

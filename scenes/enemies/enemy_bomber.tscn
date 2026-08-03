@@ -1,0 +1,17 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_bomber.gd" id="1_enemy_bomber"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_bomber"]
+radius = 14.0
+
+[node name="EnemyBomber" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("1_enemy_bomber")
+color = Color(0.78, 0.35, 0.88, 1)
+explode_damage = 3
+shape = 4
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_bomber")

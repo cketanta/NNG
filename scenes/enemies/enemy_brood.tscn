@@ -1,0 +1,15 @@
+[gd_scene load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://scripts/enemies/enemy_brood.gd" id="1_enemy_brood"]
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_brood"]
+radius = 14.0
+
+[node name="EnemyBrood" type="CharacterBody2D"]
+collision_layer = 4
+collision_mask = 2
+script = ExtResource("1_enemy_brood")
+color = Color(0.95, 0.7, 0.3, 1)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="."]
+shape = SubResource("CircleShape2D_brood")
